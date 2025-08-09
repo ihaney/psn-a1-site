@@ -370,7 +370,7 @@ export default function SupplierPage() {
                     <h2 className="text-xl font-semibold text-gray-100 mb-4">Supplier Location Overview</h2>
                     <div className="bg-gray-700/30 rounded-lg overflow-hidden">
                       <iframe
-                        src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dw901SwHSR3g-0&q=${encodeURIComponent(
+                        src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
                           `${supplier.Supplier_Location.trim()}, ${supplier.Countries.Country_Name}`
                         )}&zoom=10`}
                         width="100%"
