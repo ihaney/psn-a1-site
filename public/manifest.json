@@ -1,0 +1,21 @@
+{
+  "name": "Paisán - Latin American Products",
+  "short_name": "Paisán",
+  "description": "Discover authentic Latin American products and connect with trusted suppliers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#F4A024",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
