@@ -5,7 +5,13 @@ const MEILISEARCH_HOST = import.meta.env.VITE_MEILISEARCH_HOST;
 const MEILISEARCH_API_KEY = import.meta.env.VITE_MEILISEARCH_API_KEY;
 
 if (!MEILISEARCH_HOST || !MEILISEARCH_API_KEY) {
-  throw new Error('Missing Meilisearch environment variables');
+  console.error('Meilisearch environment variables:', {
+    host: !!MEILISEARCH_HOST,
+    apiKey: !!MEILISEARCH_API_KEY,
+    hostValue: MEILISEARCH_HOST,
+    apiKeyLength: MEILISEARCH_API_KEY?.length || 0
+  });
+  throw new Error('Missing Meilisearch environment variables: VITE_MEILISEARCH_HOST and VITE_MEILISEARCH_API_KEY');
 }
 
 const searchClient = new MeiliSearch({
