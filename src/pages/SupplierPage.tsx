@@ -37,7 +37,6 @@ export default function SupplierPage() {
   const params = useParams();
   const navigate = useNavigate();
   const supplierId = getSupplierIdFromParams(params);
-  const [showMoreProducts, setShowMoreProducts] = useState(false);
   const [showMoreProductsOffered, setShowMoreProductsOffered] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
 
@@ -131,7 +130,7 @@ export default function SupplierPage() {
         `)
         .eq('Product_Supplier_ID', supplierId)
         .order('Product_Title')
-        .limit(12); // Limit to 12 products for better performance
+        .limit(8); // Limit to 8 products for better performance
 
       if (error) throw error;
       
@@ -224,9 +223,11 @@ export default function SupplierPage() {
   });
 
   // Truncate products list for "Show more" functionality
-  const maxProductsToShow = 8;
-  const visibleSupplierProducts = showMoreProducts ? supplierProducts : supplierProducts.slice(0, maxProductsToShow);
-  const hasMoreSupplierProducts = supplierProducts.length > maxProductsToShow;
+  const hasMoreSupplierProducts = supplierProducts.length >= 8; // If we have 8 products, there might be more
+
+  const handleShowAllSupplierProducts = () => {
+    navigate(`/search?supplierId=${supplierId}`);
+  };
 
   // Truncate products offered list for "Show more" functionality
   const maxProductsOfferedToShow = 5;
@@ -506,27 +507,17 @@ export default function SupplierPage() {
                   ) : supplierProducts.length > 0 ? (
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {visibleSupplierProducts.map((product) => (
+                        {supplierProducts.map((product) => (
                           <ProductCard key={product.id} product={product} />
                         ))}
                       </div>
                       {hasMoreSupplierProducts && (
                         <div className="mt-6 text-center">
                           <button
-                            onClick={() => setShowMoreProducts(!showMoreProducts)}
-                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
+                            onClick={handleShowAllSupplierProducts}
+                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90 px-4 py-2 rounded-md font-medium transition-colors"
                           >
-                            {showMoreProducts ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" />
-                                Show less
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-4 h-4" />
-                                Show more ({supplierProducts.length - maxProductsToShow} more)
-                              </>
-                            )}
+                            View All Products from {supplier.Supplier_Name}
                           </button>
                         </div>
                       )}
