@@ -473,10 +473,11 @@ export default function SupplierPage() {
               </>
             </div>
 
-            {/* Website Preview - Right Column */}
+            {/* Website Preview - Mobile/Tablet (appears after About section) */}
             {supplier.Landing_Page_URL?.trim() && (
-              <div className="lg:col-span-1">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 sticky top-24">
+              <>
+                <Separator className="bg-gray-700 lg:hidden" />
+                <div className="lg:hidden">
                   <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
                   
                   <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
@@ -511,49 +512,9 @@ export default function SupplierPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Website Preview - Right Column */}
-            {supplier.Landing_Page_URL?.trim() && (
-              <div className="lg:col-span-1">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 sticky top-24">
-                  <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
-                  
-                  <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
-                    {!imageLoadError ? (
-                      <img
-                        src={supplier.Landing_Page_URL.trim()}
-                        alt={`Website screenshot for ${supplier.Supplier_Name}`}
-                        className="w-full h-full object-cover"
-                        onError={() => setImageLoadError(true)}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-6">
-                        <Globe className="w-12 h-12 text-gray-400 mb-4" />
-                        <p className="text-gray-300 text-sm">Screenshot unavailable</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {supplier.Supplier_Website?.trim() && (
-                    <div className="text-center">
-                      <Button asChild>
-                        <a
-                          href={supplier.Supplier_Website.trim()}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
-                        >
-                          <Globe className="w-4 h-4 mr-2" />
-                          Visit Website
-                        </a>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          </div>
           </div>
         </div>
       </div>
