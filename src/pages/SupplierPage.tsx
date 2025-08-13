@@ -77,10 +77,8 @@ export default function SupplierPage() {
         .maybeSingle();
 
       if (error) throw error;
-      
       if (!data) return null;
 
-      // Map the data to match our interface
       return {
         Supplier_ID: data.Supplier_ID,
         Supplier_Name: data.Supplier_Title,
@@ -105,7 +103,7 @@ export default function SupplierPage() {
     staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
-  // Fetch supplier products
+  // Fetch supplier products (we can keep a small limit for perf; we'll still slice to 6 when rendering)
   const { 
     data: supplierProducts = [], 
     isLoading: productsLoading 
@@ -129,12 +127,13 @@ export default function SupplierPage() {
           Product_Source_Name
         `)
         .eq('Product_Supplier_ID', supplierId)
-        .order('Product_Title')
-        .limit(6); // Limit to 6 products for better performance
+        .order('Product_Title');
+        // NOTE: no .limit here so we get the true count in memory if small sets are typical.
+        // If your dataset is huge, you can add .limit(50) and rely on the count query below
+        // to decide whether to show "View All".
 
       if (error) throw error;
       
-      // Transform to match Product interface
       return (data || []).map(product => ({
         id: product.Product_ID,
         name: product.Product_Title || 'Untitled Product',
@@ -152,30 +151,32 @@ export default function SupplierPage() {
     staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
+  // Separate COUNT query to know if there are more than 6 total products
+  const { data: productCount = 0 } = useQuery({
+    queryKey: ['supplierProductCount', supplierId],
+    queryFn: async () => {
+      if (!supplierId) return 0;
+      const { count, error } = await supabase
+        .from('Products')
+        .select('*', { count: 'exact', head: true })
+        .eq('Product_Supplier_ID', supplierId);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!supplierId,
+    staleTime: 1000 * 60 * 5
+  });
+
   // Helper functions
-  const normalizePhoneNumber = (phone: string): string => {
-    return phone.replace(/\D/g, '');
-  };
-
-  const parseTerms = (terms: string): string[] => {
-    if (!terms?.trim()) return [];
-    return terms
-      .split(',')
-      .map(term => term.trim())
-      .filter(term => term.length > 0)
-      .filter((term, index, arr) => arr.indexOf(term) === index); // dedupe
-  };
-
-  const parseListContent = (content: string): string[] => {
-    if (!content?.trim()) return [];
-    
-    return content
-      .split('\n')
-      .flatMap(line => line.split(','))
-      .map(item => item.trim())
-      .filter(item => item.length > 0)
-      .filter((item, index, arr) => arr.indexOf(item) === index); // dedupe
-  };
+  const normalizePhoneNumber = (phone: string): string => phone.replace(/\D/g, '');
+  const parseTerms = (terms: string): string[] =>
+    terms?.trim()
+      ? terms.split(',').map(t => t.trim()).filter(Boolean).filter((t, i, a) => a.indexOf(t) === i)
+      : [];
+  const parseListContent = (content: string): string[] =>
+    content?.trim()
+      ? content.split('\n').flatMap(l => l.split(',')).map(i => i.trim()).filter(Boolean).filter((t, i, a) => a.indexOf(t) === i)
+      : [];
 
   const handleRelatedTermClick = (term: string) => {
     analytics.trackEvent('related_term_clicked', {
@@ -222,14 +223,17 @@ export default function SupplierPage() {
     country: supplier?.Countries?.Country_Name
   });
 
-  // Check if there might be more products to show
-  const hasMoreSupplierProducts = supplierProducts.length >= 6; // If we have 6 products, there might be more
+  // Show "View All" only if there are truly more than 6
+  const hasMoreSupplierProducts = (productCount ?? 0) > 6;
+
+  // Slice to ensure we never render more than 6 on this page
+  const limitedProducts = supplierProducts.slice(0, 6);
 
   const handleShowAllSupplierProducts = () => {
     navigate(`/search?supplierId=${supplierId}`);
   };
 
-  // Truncate products offered list for "Show more" functionality
+  // Truncate products offered list for "Show more" toggle
   const maxProductsOfferedToShow = 5;
   const visibleProductsOffered = showMoreProductsOffered ? productsOffered : productsOffered.slice(0, maxProductsOfferedToShow);
   const hasMoreProductsOffered = productsOffered.length > maxProductsOfferedToShow;
@@ -341,7 +345,6 @@ export default function SupplierPage() {
                           key={index}
                           onClick={() => handleRelatedTermClick(term)}
                           className="px-3 py-1 bg-gray-700/50 hover:bg-[#F4A024]/20 text-gray-300 hover:text-[#F4A024] rounded-full text-sm transition-colors"
-                          className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
                         >
                           {term.length > 20 ? `${term.substring(0, 20)}...` : term}
                         </button>
@@ -364,7 +367,7 @@ export default function SupplierPage() {
                 </>
               )}
 
-              {/* Website Preview - Mobile/Tablet (appears after About section) */}
+              {/* Website Preview - Mobile/Tablet */}
               {supplier.Landing_Page_URL?.trim() && (
                 <>
                   <Separator className="bg-gray-700 lg:hidden" />
@@ -495,7 +498,7 @@ export default function SupplierPage() {
                     Supplier Products
                     {supplierProducts.length > 0 && (
                       <span className="text-sm font-normal text-gray-400 ml-2">
-                        ({supplierProducts.length} {supplierProducts.length === 1 ? 'product' : 'products'})
+                        ({productCount} {productCount === 1 ? 'product' : 'products'})
                       </span>
                     )}
                   </h2>
@@ -507,7 +510,7 @@ export default function SupplierPage() {
                   ) : supplierProducts.length > 0 ? (
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {supplierProducts.map((product) => (
+                        {limitedProducts.map((product) => (
                           <ProductCard key={product.id} product={product} />
                         ))}
                       </div>
