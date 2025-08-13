@@ -516,7 +516,6 @@ export default function SupplierPage() {
             )}
           </div>
           </div>
-        </div>
       </div>
     </>
   );
