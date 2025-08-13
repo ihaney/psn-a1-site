@@ -459,6 +459,42 @@ export default function SupplierPage() {
                 </>
               )}
 
+              {/* Products Offered */}
+              {productsOffered.length > 0 && (
+                <>
+                  <Separator className="bg-gray-700" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Products Offered</h2>
+                    <ul className="space-y-2">
+                      {visibleProductsOffered.map((product, index) => (
+                        <li key={index} className="text-gray-300 flex items-start">
+                          <span className="text-[#F4A024] mr-2">•</span>
+                          {product}
+                        </li>
+                      ))}
+                    </ul>
+                    {hasMoreProductsOffered && (
+                      <button
+                        onClick={() => setShowMoreProductsOffered(!showMoreProductsOffered)}
+                        className="mt-4 text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1"
+                      >
+                        {showMoreProductsOffered ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Show less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            Show more ({productsOffered.length - maxProductsOfferedToShow} more)
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
               {/* Supplier Location Overview */}
               {supplier.Supplier_Location?.trim() && supplier.Countries.Country_Name && (
                 <>
@@ -504,31 +540,33 @@ export default function SupplierPage() {
                       <LoadingSpinner />
                     </div>
                   ) : supplierProducts.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {visibleSupplierProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
-                    </div>
-                    {hasMoreSupplierProducts && (
-                      <div className="mt-6 text-center">
-                        <button
-                          onClick={() => setShowMoreProducts(!showMoreProducts)}
-                          className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
-                        >
-                          {showMoreProducts ? (
-                            <>
-                              <ChevronUp className="w-4 h-4" />
-                              Show less
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-4 h-4" />
-                              Show more ({supplierProducts.length - maxProductsToShow} more)
-                            </>
-                          )}
-                        </button>
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {visibleSupplierProducts.map((product) => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
                       </div>
-                    )}
+                      {hasMoreSupplierProducts && (
+                        <div className="mt-6 text-center">
+                          <button
+                            onClick={() => setShowMoreSupplierProducts(!showMoreSupplierProducts)}
+                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
+                          >
+                            {showMoreSupplierProducts ? (
+                              <>
+                                <ChevronUp className="w-4 h-4" />
+                                Show less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-4 h-4" />
+                                Show more ({supplierProducts.length - maxProductsToShow} more)
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-8 bg-gray-700/30 rounded-lg">
                       <p className="text-gray-400">No products found for this supplier.</p>
