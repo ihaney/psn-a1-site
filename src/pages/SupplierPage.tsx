@@ -10,6 +10,8 @@ import { Separator } from '../components/ui/separator';
 import { getSupplierIdFromParams } from '../utils/urlHelpers';
 import { analytics } from '../lib/analytics';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ProductCard from '../components/ProductCard';
+import type { Product } from '../types';
 
 interface SupplierData {
   Supplier_ID: string;
@@ -98,6 +100,53 @@ export default function SupplierPage() {
           Country_Image: data.Countries?.Country_Image || ''
         }
       } as SupplierData;
+    },
+    enabled: !!supplierId,
+    staleTime: 1000 * 60 * 5 // 5 minutes
+  });
+
+  // Fetch supplier products
+  const { 
+    data: supplierProducts = [], 
+    isLoading: productsLoading 
+  } = useQuery({
+    queryKey: ['supplierProducts', supplierId],
+    queryFn: async () => {
+      if (!supplierId) return [];
+      
+      const { data, error } = await supabase
+        .from('Products')
+        .select(`
+          Product_ID,
+          Product_Title,
+          Product_Price,
+          Product_Image_URL,
+          Product_URL,
+          Product_MOQ,
+          Product_Country_Name,
+          Product_Category_Name,
+          Product_Supplier_Name,
+          Product_Source_Name
+        `)
+        .eq('Product_Supplier_ID', supplierId)
+        .order('Product_Title')
+        .limit(12); // Limit to 12 products for better performance
+
+      if (error) throw error;
+      
+      // Transform to match Product interface
+      return (data || []).map(product => ({
+        id: product.Product_ID,
+        name: product.Product_Title || 'Untitled Product',
+        Product_Price: product.Product_Price || '$0',
+        image: product.Product_Image_URL || '',
+        country: product.Product_Country_Name || 'Unknown',
+        category: product.Product_Category_Name || 'Unknown',
+        supplier: product.Product_Supplier_Name || 'Unknown',
+        Product_MOQ: product.Product_MOQ || '0',
+        sourceUrl: product.Product_URL || '',
+        marketplace: product.Product_Source_Name || 'Unknown'
+      })) as Product[];
     },
     enabled: !!supplierId,
     staleTime: 1000 * 60 * 5 // 5 minutes
@@ -388,6 +437,40 @@ export default function SupplierPage() {
                   </div>
                 </>
               )}
+
+              {/* Supplier Products Section */}
+              <>
+                <Separator className="bg-gray-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-100 mb-4">
+                    Supplier Products
+                    {supplierProducts.length > 0 && (
+                      <span className="text-sm font-normal text-gray-400 ml-2">
+                        ({supplierProducts.length} {supplierProducts.length === 1 ? 'product' : 'products'})
+                      </span>
+                    )}
+                  </h2>
+                  
+                  {productsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : supplierProducts.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {supplierProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-700/30 rounded-lg">
+                      <p className="text-gray-400">No products found for this supplier.</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Products may not be available in our current catalog.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
             </div>
 
             {/* Website Preview - Right Column */}
