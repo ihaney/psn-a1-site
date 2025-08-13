@@ -107,22 +107,13 @@ export default function SupplierPage() {
 
   // Fetch supplier products
   const { 
-    data: supplierProductsData, 
+    data: supplierProducts = [], 
     isLoading: productsLoading 
   } = useQuery({
     queryKey: ['supplierProducts', supplierId],
     queryFn: async () => {
-      if (!supplierId) return { products: [], totalCount: 0 };
+      if (!supplierId) return [];
       
-      // Get total count first
-      const { count: totalCount, error: countError } = await supabase
-        .from('Products')
-        .select('*', { count: 'exact', head: true })
-        .eq('Product_Supplier_ID', supplierId);
-
-      if (countError) throw countError;
-
-      // Get limited products for display
       const { data, error } = await supabase
         .from('Products')
         .select(`
@@ -139,12 +130,12 @@ export default function SupplierPage() {
         `)
         .eq('Product_Supplier_ID', supplierId)
         .order('Product_Title')
-        .limit(12);
+        .limit(12); // Limit to 12 products for better performance
 
       if (error) throw error;
       
       // Transform to match Product interface
-      const products = (data || []).map(product => ({
+      return (data || []).map(product => ({
         id: product.Product_ID,
         name: product.Product_Title || 'Untitled Product',
         Product_Price: product.Product_Price || '$0',
@@ -156,19 +147,10 @@ export default function SupplierPage() {
         sourceUrl: product.Product_URL || '',
         marketplace: product.Product_Source_Name || 'Unknown'
       })) as Product[];
-
-      return {
-        products,
-        totalCount: totalCount || 0
-      };
     },
     enabled: !!supplierId,
     staleTime: 1000 * 60 * 5 // 5 minutes
   });
-
-  const supplierProducts = supplierProductsData?.products || [];
-  const totalProductCount = supplierProductsData?.totalCount || 0;
-  const hasMoreProducts = totalProductCount > 12;
 
   // Helper functions
   const normalizePhoneNumber = (phone: string): string => {
@@ -243,7 +225,7 @@ export default function SupplierPage() {
   // Truncate products list for "Show more" functionality
   const maxProductsToShow = 5;
   const visibleProducts = showMoreProducts ? productsOffered : productsOffered.slice(0, maxProductsToShow);
-  const hasMoreDisplayedProducts = productsOffered.length > maxProductsToShow;
+  const hasMoreProducts = productsOffered.length > maxProductsToShow;
 
   return (
     <>
@@ -431,26 +413,6 @@ export default function SupplierPage() {
                         </li>
                       ))}
                     </ul>
-                    {hasMoreDisplayedProducts && (
-                      <div className="mt-4">
-                        <button
-                          onClick={() => setShowMoreProducts(!showMoreProducts)}
-                          className="flex items-center text-[#F4A024] hover:text-[#F4A024]/80 text-sm"
-                        >
-                          {showMoreProducts ? (
-                            <>
-                              <ChevronUp className="w-4 h-4 mr-1" />
-                              Show less
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-4 h-4 mr-1" />
-                              Show more ({productsOffered.length - maxProductsToShow} more)
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </>
               )}
@@ -488,9 +450,9 @@ export default function SupplierPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-100 mb-4">
                     Supplier Products
-                    {totalProductCount > 0 && (
+                    {supplierProducts.length > 0 && (
                       <span className="text-sm font-normal text-gray-400 ml-2">
-                        ({totalProductCount} {totalProductCount === 1 ? 'product' : 'products'})
+                        ({supplierProducts.length} {supplierProducts.length === 1 ? 'product' : 'products'})
                       </span>
                     )}
                   </h2>
@@ -500,24 +462,11 @@ export default function SupplierPage() {
                       <LoadingSpinner />
                     </div>
                   ) : supplierProducts.length > 0 ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {supplierProducts.map((product) => (
-                          <ProductCard key={product.id} product={product} />
-                        ))}
-                      </div>
-                      
-                      {hasMoreProducts && (
-                        <div className="text-center mt-8">
-                          <Button
-                            onClick={() => navigate(`/supplier/${params.slug}/${supplierId}/products`)}
-                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
-                          >
-                            View all {totalProductCount} products
-                          </Button>
-                        </div>
-                      )}
-                    </>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {supplierProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-center py-8 bg-gray-700/30 rounded-lg">
                       <p className="text-gray-400">No products found for this supplier.</p>

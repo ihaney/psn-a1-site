@@ -18,7 +18,6 @@ const RFQTemplatePage = React.lazy(() => import('./pages/RFQTemplatePage'));
 const TariffCalculatorPage = React.lazy(() => import('./pages/TariffCalculatorPage'));
 const CreateProfilePage = React.lazy(() => import('./pages/CreateProfilePage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
-const SupplierProductsListPage = React.lazy(() => import('./pages/SupplierProductsListPage'));
 const PoliciesPage = React.lazy(() => import('./pages/PoliciesPage'));
 const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 
@@ -39,10 +38,6 @@ const routes: RouteObject[] = [
   {
     path: '/supplier/:slug/:supplierId',
     element: <SupplierPage />
-  },
-  {
-    path: '/supplier/:slug/:supplierId/products',
-    element: <SupplierProductsListPage />
   },
   {
     path: '/categories',
