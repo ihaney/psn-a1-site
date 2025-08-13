@@ -369,6 +369,12 @@ export default function SupplierPage() {
                           <span className="text-[#F4A024] mr-2">•</span>
                           {industry}
                         </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+
               {/* Website Preview - Mobile/Tablet (appears after About section) */}
               {supplier.Landing_Page_URL?.trim() && (
                 <>
@@ -516,7 +522,7 @@ export default function SupplierPage() {
               )}
             </div>
           </div>
-          </div>
+        </div>
       </div>
     </>
   );
