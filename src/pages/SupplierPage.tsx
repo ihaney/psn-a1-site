@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mail, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import { Globe, Mail, MessageSquare, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -222,7 +222,7 @@ export default function SupplierPage() {
     country: supplier?.Countries?.Country_Name
   });
 
-  // Truncate products list for "Show more" functionality
+  // Check if there might be more products to show
   const hasMoreSupplierProducts = supplierProducts.length >= 6; // If we have 6 products, there might be more
 
   const handleShowAllSupplierProducts = () => {
@@ -515,9 +515,10 @@ export default function SupplierPage() {
                         <div className="mt-6 text-center">
                           <button
                             onClick={handleShowAllSupplierProducts}
-                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium"
+                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
                           >
                             View All Products from {supplier.Supplier_Name}
+                            <ArrowRight className="w-4 h-4" />
                           </button>
                         </div>
                       )}
