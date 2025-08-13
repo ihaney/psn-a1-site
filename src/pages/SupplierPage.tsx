@@ -549,10 +549,10 @@ export default function SupplierPage() {
                       {hasMoreSupplierProducts && (
                         <div className="mt-6 text-center">
                           <button
-                            onClick={() => setShowMoreSupplierProducts(!showMoreSupplierProducts)}
+                            onClick={() => setShowMoreProducts(!showMoreProducts)}
                             className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
                           >
-                            {showMoreSupplierProducts ? (
+                            {showMoreProducts ? (
                               <>
                                 <ChevronUp className="w-4 h-4" />
                                 Show less
