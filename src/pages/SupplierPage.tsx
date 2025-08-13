@@ -357,24 +357,6 @@ export default function SupplierPage() {
                 </>
               )}
 
-              {/* Industries Supported */}
-              {supplier.ai_industries_supported?.trim() && (
-                <>
-                  <Separator className="bg-gray-700" />
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Industries Supported</h2>
-                    <ul className="space-y-2">
-                      {industriesSupported.map((industry, index) => (
-                        <li key={index} className="text-gray-300 flex items-start">
-                          <span className="text-[#F4A024] mr-2">•</span>
-                          {industry}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              )}
-
               {/* Website Preview - Mobile/Tablet (appears after About section) */}
               {supplier.Landing_Page_URL?.trim() && (
                 <>
@@ -413,6 +395,24 @@ export default function SupplierPage() {
                         </Button>
                       </div>
                     )}
+                  </div>
+                </>
+              )}
+
+              {/* Industries Supported */}
+              {supplier.ai_industries_supported?.trim() && (
+                <>
+                  <Separator className="bg-gray-700" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Industries Supported</h2>
+                    <ul className="space-y-2">
+                      {industriesSupported.map((industry, index) => (
+                        <li key={index} className="text-gray-300 flex items-start">
+                          <span className="text-[#F4A024] mr-2">•</span>
+                          {industry}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </>
               )}
