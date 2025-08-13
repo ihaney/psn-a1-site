@@ -230,7 +230,12 @@ export default function SupplierPage() {
   const limitedProducts = supplierProducts.slice(0, 6);
 
   const handleShowAllSupplierProducts = () => {
-    navigate(`/search?supplierId=${supplierId}`);
+    if (supplier?.Supplier_Name) {
+      navigate(`/search?q=${encodeURIComponent(supplier.Supplier_Name)}&mode=products`);
+    } else {
+      // Fallback to general products page if supplier name is not available
+      navigate('/products');
+    }
   };
 
   // Truncate products offered list for "Show more" toggle
