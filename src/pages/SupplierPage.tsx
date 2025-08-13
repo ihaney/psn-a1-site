@@ -341,7 +341,7 @@ export default function SupplierPage() {
                           key={index}
                           onClick={() => handleRelatedTermClick(term)}
                           className="px-3 py-1 bg-gray-700/50 hover:bg-[#F4A024]/20 text-gray-300 hover:text-[#F4A024] rounded-full text-sm transition-colors"
-                          title={term}
+                          className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
                         >
                           {term.length > 20 ? `${term.substring(0, 20)}...` : term}
                         </button>
