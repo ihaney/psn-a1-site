@@ -432,6 +432,26 @@ export default function SupplierPage() {
                       ))}
                     </ul>
                     {hasMoreDisplayedProducts && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowMoreProducts(!showMoreProducts)}
+                          className="flex items-center text-[#F4A024] hover:text-[#F4A024]/80 text-sm"
+                        >
+                          {showMoreProducts ? (
+                            <>
+                              <ChevronUp className="w-4 h-4 mr-1" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-4 h-4 mr-1" />
+                              Show more ({productsOffered.length - maxProductsToShow} more)
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
