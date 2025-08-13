@@ -369,43 +369,43 @@ export default function SupplierPage() {
                           <span className="text-[#F4A024] mr-2">•</span>
                           {industry}
                         </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              )}
-
-              {/* Products Offered */}
-              {productsOffered.length > 0 && (
+              {/* Website Preview - Mobile/Tablet (appears after About section) */}
+              {supplier.Landing_Page_URL?.trim() && (
                 <>
-                  <Separator className="bg-gray-700" />
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Products Offered</h2>
-                    <ul className="space-y-2">
-                      {visibleProducts.map((product, index) => (
-                        <li key={index} className="text-gray-300 flex items-start">
-                          <span className="text-[#F4A024] mr-2">•</span>
-                          {product}
-                        </li>
-                      ))}
-                    </ul>
-                    {hasMoreProducts && (
-                      <button
-                        onClick={() => setShowMoreProducts(!showMoreProducts)}
-                        className="mt-3 flex items-center gap-2 text-[#F4A024] hover:text-[#F4A024]/80 transition-colors"
-                      >
-                        {showMoreProducts ? (
-                          <>
-                            <ChevronUp className="w-4 h-4" />
-                            Show less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-4 h-4" />
-                            Show more ({productsOffered.length - maxProductsToShow} more)
-                          </>
-                        )}
-                      </button>
+                  <Separator className="bg-gray-700 lg:hidden" />
+                  <div className="lg:hidden">
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
+                    
+                    <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
+                      {!imageLoadError ? (
+                        <img
+                          src={supplier.Landing_Page_URL.trim()}
+                          alt={`Website screenshot for ${supplier.Supplier_Name}`}
+                          className="w-full h-full object-cover"
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6">
+                          <Globe className="w-12 h-12 text-gray-400 mb-4" />
+                          <p className="text-gray-300 text-sm">Screenshot unavailable</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {supplier.Supplier_Website?.trim() && (
+                      <div className="text-center">
+                        <Button asChild>
+                          <a
+                            href={supplier.Supplier_Website.trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Visit Website
+                          </a>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </>
@@ -473,47 +473,48 @@ export default function SupplierPage() {
               </>
             </div>
 
-            {/* Website Preview - Mobile/Tablet (appears after About section) */}
-            {supplier.Landing_Page_URL?.trim() && (
-              <>
-                <Separator className="bg-gray-700 lg:hidden" />
-                <div className="lg:hidden">
-                  <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
-                  
-                  <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
-                    {!imageLoadError ? (
-                      <img
-                        src={supplier.Landing_Page_URL.trim()}
-                        alt={`Website screenshot for ${supplier.Supplier_Name}`}
-                        className="w-full h-full object-cover"
-                        onError={() => setImageLoadError(true)}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-6">
-                        <Globe className="w-12 h-12 text-gray-400 mb-4" />
-                        <p className="text-gray-300 text-sm">Screenshot unavailable</p>
+            {/* Right Column - Website Preview (Desktop only) */}
+            <div className="lg:col-span-1">
+              {supplier.Landing_Page_URL?.trim() && (
+                <div className="hidden lg:block lg:sticky lg:top-24">
+                  <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
+                    
+                    <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
+                      {!imageLoadError ? (
+                        <img
+                          src={supplier.Landing_Page_URL.trim()}
+                          alt={`Website screenshot for ${supplier.Supplier_Name}`}
+                          className="w-full h-full object-cover"
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6">
+                          <Globe className="w-12 h-12 text-gray-400 mb-4" />
+                          <p className="text-gray-300 text-sm">Screenshot unavailable</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {supplier.Supplier_Website?.trim() && (
+                      <div className="text-center">
+                        <Button asChild>
+                          <a
+                            href={supplier.Supplier_Website.trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Visit Website
+                          </a>
+                        </Button>
                       </div>
                     )}
                   </div>
-                  
-                  {supplier.Supplier_Website?.trim() && (
-                    <div className="text-center">
-                      <Button asChild>
-                        <a
-                          href={supplier.Supplier_Website.trim()}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
-                        >
-                          <Globe className="w-4 h-4 mr-2" />
-                          Visit Website
-                        </a>
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
           </div>
       </div>
