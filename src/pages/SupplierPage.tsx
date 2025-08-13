@@ -130,7 +130,7 @@ export default function SupplierPage() {
         `)
         .eq('Product_Supplier_ID', supplierId)
         .order('Product_Title')
-        .limit(8); // Limit to 8 products for better performance
+        .limit(6); // Limit to 6 products for better performance
 
       if (error) throw error;
       
@@ -223,7 +223,7 @@ export default function SupplierPage() {
   });
 
   // Truncate products list for "Show more" functionality
-  const hasMoreSupplierProducts = supplierProducts.length >= 8; // If we have 8 products, there might be more
+  const hasMoreSupplierProducts = supplierProducts.length >= 6; // If we have 6 products, there might be more
 
   const handleShowAllSupplierProducts = () => {
     navigate(`/search?supplierId=${supplierId}`);
@@ -515,7 +515,7 @@ export default function SupplierPage() {
                         <div className="mt-6 text-center">
                           <button
                             onClick={handleShowAllSupplierProducts}
-                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90 px-4 py-2 rounded-md font-medium transition-colors"
+                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium"
                           >
                             View All Products from {supplier.Supplier_Name}
                           </button>
