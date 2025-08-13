@@ -243,7 +243,7 @@ export default function SupplierPage() {
   // Truncate products list for "Show more" functionality
   const maxProductsToShow = 5;
   const visibleProducts = showMoreProducts ? productsOffered : productsOffered.slice(0, maxProductsToShow);
-  const hasMoreProducts = productsOffered.length > maxProductsToShow;
+  const hasMoreDisplayedProducts = productsOffered.length > maxProductsToShow;
 
   return (
     <>
@@ -431,7 +431,7 @@ export default function SupplierPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                    {hasMoreDisplayedProducts && (
                 </>
               )}
 
