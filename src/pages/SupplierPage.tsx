@@ -112,7 +112,7 @@ export default function SupplierPage() {
   } = useQuery({
     queryKey: ['supplierProducts', supplierId],
     queryFn: async () => {
-      if (!supplierId) return [];
+      if (!supplierId) return { products: [], totalCount: 0 };
       
       // Get total count first
       const { count: totalCount, error: countError } = await supabase
