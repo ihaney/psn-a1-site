@@ -224,7 +224,7 @@ export default function SupplierPage() {
   });
 
   // Truncate products list for "Show more" functionality
-  const maxProductsToShow = 5;
+  const maxProductsToShow = 8;
   const visibleSupplierProducts = showMoreProducts ? supplierProducts : supplierProducts.slice(0, maxProductsToShow);
   const hasMoreSupplierProducts = supplierProducts.length > maxProductsToShow;
 
