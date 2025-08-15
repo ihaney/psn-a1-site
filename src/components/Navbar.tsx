@@ -9,6 +9,7 @@ import { useSavedItems } from '../hooks/useSavedItems';
 import { useContactHistory } from '../hooks/useContactHistory';
 import AuthModal from './AuthModal';
 import toast from 'react-hot-toast';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface Category {
   Category_ID: string;
@@ -115,7 +116,7 @@ export default function Navbar() {
   };
 
   const handleMouseEnter = (dropdown: string) => {
-    if (window.innerWidth >= 768) {
+    if (isBrowser && window.innerWidth >= 768) {
       if (dropdownTimeout) {
         clearTimeout(dropdownTimeout);
         setDropdownTimeout(null);
@@ -125,7 +126,7 @@ export default function Navbar() {
   };
 
   const handleMouseLeave = () => {
-    if (window.innerWidth >= 768) {
+    if (isBrowser && window.innerWidth >= 768) {
       const timeout = setTimeout(() => {
         setActiveDropdown(null);
       }, 300);

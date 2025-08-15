@@ -6,6 +6,7 @@ import { useSavedItems } from '../hooks/useSavedItems';
 import { productsIndex } from '../lib/meilisearch';
 import LoadingSpinner from '../components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 // Dynamic imports for PDF functionality
 const PDFComponents = React.lazy(() => 
@@ -849,6 +850,7 @@ export default function RFQTemplatePage() {
             onClick={handlePDFDownload}
             disabled={pdfLoading}
             className="flex items-center gap-2 bg-[#F4A024] text-black px-6 py-3 rounded-lg hover:bg-[#F4A024]/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ display: isBrowser ? 'flex' : 'none' }}
           >
             <FileText className="w-5 h-5" />
             {pdfLoading ? 'Generating PDF...' : 'Export as PDF'}

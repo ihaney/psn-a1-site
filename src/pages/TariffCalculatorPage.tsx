@@ -7,6 +7,7 @@ import { useSavedItems } from '../hooks/useSavedItems';
 import LoadingSpinner from '../components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import type { TariffCategory } from '../types';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface SelectedProduct {
   id: string;
@@ -442,6 +443,7 @@ export default function TariffCalculatorPage() {
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center font-bold text-[#F4A024] hover:text-[#F4A024]/80 mb-8"
+            style={{ display: isBrowser ? 'flex' : 'none' }}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back

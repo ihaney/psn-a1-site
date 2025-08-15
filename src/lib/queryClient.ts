@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { logError } from './errorLogging';
 import { createPersistentCache } from './cache';
+import { isBrowser } from './isomorphic-helpers';
 
 // Create a client for SSR/SSG
 export const createQueryClient = () => {
@@ -29,6 +30,6 @@ export const createQueryClient = () => {
 export const queryClient = createQueryClient();
 
 // Initialize persistent cache for client-side
-if (typeof window !== 'undefined') {
+if (isBrowser) {
   createPersistentCache(queryClient);
 }

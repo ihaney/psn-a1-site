@@ -22,7 +22,7 @@ export function hydrateQueryClient(queryClient: any, dehydratedState: string | n
 
 // Function to get the dehydrated state from the window
 export function getDehydratedState(): string | null {
-  if (!isBrowser) return null;
+  if (!isBrowser || typeof document === 'undefined') return null;
   
   const stateElement = document.getElementById('__PAISAN_DEHYDRATED_STATE__');
   if (!stateElement) return null;
