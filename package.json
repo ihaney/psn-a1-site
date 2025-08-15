@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite-ssg build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -35,8 +35,7 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.22.3",
     "tailwind-merge": "^3.3.1",
-    "vite-plugin-ssr": "^0.4.142",
-    "vite-ssg": "^0.23.6"
+    "vite-plugin-ssr": "^0.4.142"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
