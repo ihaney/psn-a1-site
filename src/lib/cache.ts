@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { logError } from './errorLogging';
+import { isBrowser } from './isomorphic-helpers';
 
 const CACHE_KEY_PREFIX = 'paisan_cache_';
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
@@ -12,6 +13,8 @@ interface CacheEntry<T> {
 export function createPersistentCache(queryClient: QueryClient) {
   // Load persisted queries on startup
   try {
+    if (!isBrowser) return;
+    
     const keys = Object.keys(localStorage);
     const cacheKeys = keys.filter(key => key.startsWith(CACHE_KEY_PREFIX));
     
@@ -39,6 +42,8 @@ export function createPersistentCache(queryClient: QueryClient) {
 
   // Subscribe to cache updates
   queryClient.getQueryCache().subscribe(event => {
+    if (!isBrowser) return;
+    
     if (!event.query.isActive()) return;
 
     try {

@@ -9,6 +9,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { logError } from '../lib/errorLogging';
 import { logSearchQuery } from '../lib/searchLogger';
 import { createSupplierUrl } from '../utils/urlHelpers';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface SearchResult {
   id: string;
@@ -31,6 +32,8 @@ interface SearchResult {
 
 // Helper function to get saved search mode from localStorage
 function getSavedSearchMode(): 'products' | 'suppliers' {
+  if (!isBrowser) return 'products';
+  
   try {
     const saved = localStorage.getItem('paisan_search_mode');
     return saved === 'suppliers' ? 'suppliers' : 'products';
@@ -41,6 +44,8 @@ function getSavedSearchMode(): 'products' | 'suppliers' {
 
 // Helper function to save search mode to localStorage
 function saveSearchMode(mode: 'products' | 'suppliers') {
+  if (!isBrowser) return;
+  
   try {
     localStorage.setItem('paisan_search_mode', mode);
   } catch {

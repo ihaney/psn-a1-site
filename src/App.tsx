@@ -8,12 +8,15 @@ import TourGuide from './components/TourGuide';
 import { useAnalytics } from './lib/analytics';
 import { useScrollToTop } from './hooks/useScrollToTop';
 import routes from './routes';
+import { isBrowser } from './lib/isomorphic-helpers';
 
 // Navigation history tracker component
 function NavigationHistoryTracker({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   
   useEffect(() => {
+    if (!isBrowser) return;
+    
     // Get current history stack
     const historyStack = JSON.parse(sessionStorage.getItem('navigationHistory') || '[]');
     

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { isBrowser } from './isomorphic-helpers';
 
 type EventOptions = {
   props?: Record<string, string | number | boolean>;
@@ -16,6 +17,8 @@ declare global {
 
 export const analytics = {
   trackPageview: (title?: string) => {
+    if (!isBrowser) return;
+    
     // Google Analytics is now handled automatically by the gtag script in index.html
     // No need to manually track page views for Google Analytics
 
@@ -33,6 +36,8 @@ export const analytics = {
   },
 
   trackEvent: (eventName: string, options?: EventOptions) => {
+    if (!isBrowser) return;
+    
     // Track in Google Analytics
     if (window.gtag) {
       window.gtag('event', eventName, {
@@ -56,6 +61,8 @@ export const analytics = {
 
   // Track time spent on page
   startTimer: (pageName: string) => {
+    if (!isBrowser) return () => {};
+    
     const startTime = Date.now();
     return () => {
       const timeSpent = Math.round((Date.now() - startTime) / 1000); // Convert to seconds

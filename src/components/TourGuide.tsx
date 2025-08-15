@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { analytics } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 import { createSupplierUrl } from '../utils/urlHelpers';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface TourStep {
   path: string;
@@ -22,7 +23,7 @@ interface TourData {
 export default function TourGuide() {
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(() => {
-    return localStorage.getItem('tourDismissed') === 'true';
+    return isBrowser ? localStorage.getItem('tourDismissed') === 'true' : false;
   });
   const [currentStep, setCurrentStep] = useState(0);
   const [tourData, setTourData] = useState<TourData | null>(null);
@@ -187,7 +188,9 @@ export default function TourGuide() {
 
   const dismissTour = () => {
     setIsDismissed(true);
-    localStorage.setItem('tourDismissed', 'true');
+    if (isBrowser) {
+      localStorage.setItem('tourDismissed', 'true');
+    }
     analytics.trackEvent('tour_dismissed');
   };
 

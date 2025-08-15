@@ -1,3 +1,4 @@
+// src/entry-server.tsx
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
@@ -5,6 +6,11 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { HelmetProvider, HelmetServerState } from 'react-helmet-async';
 import App from './App';
 import './index.css';
+
+// No DOM here
+export function createApp() {
+  return <App />;
+}
 
 // This is the server-side entry point for SSG
 export function render(url: string, context: any = {}) {

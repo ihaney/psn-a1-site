@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { isBrowser } from './isomorphic-helpers';
 
 interface ErrorLog {
   message: string;
@@ -47,8 +48,8 @@ export async function logError(error: Error | string, context?: Record<string, a
   // Build error context with user info
   const errorContext = {
     ...context,
-    userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined,
-    url: typeof window !== 'undefined' ? window.location.href : undefined,
+    userAgent: isBrowser ? window.navigator.userAgent : undefined,
+    url: isBrowser ? window.location.href : undefined,
     timestamp: new Date().toISOString(),
     userId: user?.id,
     sessionId: session?.id,

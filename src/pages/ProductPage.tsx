@@ -13,6 +13,7 @@ import { useSimilarProducts } from '../hooks/useSimilarProducts';
 import ProductCard from '../components/ProductCard';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { createSupplierUrl } from '../utils/urlHelpers';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface ExtendedProduct extends Product {
   supplierEmail?: string;
@@ -22,7 +23,7 @@ interface ExtendedProduct extends Product {
 export default function ProductPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isMobile] = useState(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  const [isMobile] = useState(() => isBrowser ? /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) : false);
   const { data: savedItems = [], toggleSavedItem } = useSavedItems();
   const { recordContact } = useContactHistory();
   const { data: similarProducts = [], isLoading: loadingSimilar } = useSimilarProducts(id || '');
@@ -123,7 +124,7 @@ export default function ProductPage() {
   const handleShare = () => {
     if (!formattedProduct) return;
 
-    const shareUrl = window.location.href;
+    const shareUrl = isBrowser ? window.location.href : '';
     const shareText = `I found this product on Paisán.\n\n${formattedProduct.name}\n\n${shareUrl}`;
 
     if (isMobile) {

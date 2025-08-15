@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { isBrowser } from '../lib/isomorphic-helpers';
 
 interface SEOProps {
   title: string;
@@ -14,7 +15,7 @@ export default function SEO({
   description = "Discover authentic Latin American products and connect with trusted suppliers. Paisán bridges the gap between Latin American suppliers and global markets.",
   keywords = "Latin American products, wholesale, suppliers, marketplace, Mexico, Colombia, Brazil, import, export, B2B",
   image = "https://paisan.net/social-preview.jpg",
-  url = typeof window !== 'undefined' ? window.location.href : 'https://paisan.net',
+  url = isBrowser ? window.location.href : 'https://paisan.net',
   type = "website"
 }: SEOProps) {
   const fullTitle = `${title} | Paisán`;
