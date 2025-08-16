@@ -304,38 +304,54 @@ export default function SupplierPage() {
             <div className="lg:col-span-2 space-y-8 relative">
               {/* Header */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6">
-                <div className="flex items-start gap-4 mb-6">
-                  {/* Flag */}
-                  <div className="flex-shrink-0">
-                    {supplier.Countries.Country_Image ? (
-                      <img
-                        src={supplier.Countries.Country_Image}
-                        alt={`${supplier.Countries.Country_Name} flag`}
-                        className="w-8 h-8 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded bg-gray-600 flex items-center justify-center">
-                        <span className="text-xs text-gray-300">🏳️</span>
-                      </div>
-                    )}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  {/* Supplier Info Group */}
+                  <div className="flex items-start gap-4">
+                    {/* Flag */}
+                    <div className="flex-shrink-0">
+                      {supplier.Countries.Country_Image ? (
+                        <img
+                          src={supplier.Countries.Country_Image}
+                          alt={`${supplier.Countries.Country_Name} flag`}
+                          className="w-8 h-8 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-gray-600 flex items-center justify-center">
+                          <span className="text-xs text-gray-300">🏳️</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Supplier Info */}
+                    <div className="flex-1">
+                      <h1 className="text-3xl font-bold text-gray-100 mb-2">
+                        {supplier.Supplier_Name}
+                      </h1>
+                      {supplier.Supplier_Location?.trim() && (
+                        <p className="text-gray-300 mb-1 font-bold">{supplier.Supplier_Location.trim()}</p>
+                      )}
+                      {supplier.Supplier_Source_Name?.trim() && (
+                        <div className="mb-1">
+                          <span className="inline-block px-2 py-1 rounded-full bg-[#F4A024]/20 text-[#F4A024] text-xs font-medium">
+                            Source: {supplier.Supplier_Source_Name.trim()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Supplier Info */}
-                  <div className="flex-1">
-                    <h1 className="text-3xl font-bold text-gray-100 mb-2">
-                      {supplier.Supplier_Name}
-                    </h1>
-                    {supplier.Supplier_Location?.trim() && (
-                      <p className="text-gray-300 mb-1 font-bold">{supplier.Supplier_Location.trim()}</p>
-                    )}
-                    {supplier.Supplier_Source_Name?.trim() && (
-                      <div className="mb-1">
-                        <span className="inline-block px-2 py-1 rounded-full bg-[#F4A024]/20 text-[#F4A024] text-xs font-medium">
-                          Source: {supplier.Supplier_Source_Name.trim()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  {/* Save Button */}
+                  <button
+                    onClick={handleSaveClick}
+                    className={`px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-2 flex-shrink-0 ${
+                      isSaved 
+                        ? 'bg-gray-800 text-[#F4A024]' 
+                        : 'bg-gray-800 text-gray-300 hover:text-[#F4A024]'
+                    }`}
+                  >
+                    <Bookmark className="w-5 h-5" fill={isSaved ? 'currentColor' : 'none'} />
+                    <span>{isSaved ? 'Saved' : 'Save Supplier'}</span>
+                  </button>
                 </div>
 
                 {/* Action Buttons */}
