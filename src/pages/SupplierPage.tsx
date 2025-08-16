@@ -301,7 +301,7 @@ export default function SupplierPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content - Left Column */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-8 relative">
               {/* Header */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6">
                 <div className="flex items-start gap-4 mb-6">
