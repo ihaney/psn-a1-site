@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Mail, MessageSquare, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import { Globe, Mail, MessageSquare, ChevronDown, ChevronUp, ArrowRight, Bookmark } from 'lucide-react';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -11,6 +11,8 @@ import { getSupplierIdFromParams } from '../utils/urlHelpers';
 import { analytics } from '../lib/analytics';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductCard from '../components/ProductCard';
+import { useSavedSuppliers } from '../hooks/useSavedSuppliers';
+import toast from 'react-hot-toast';
 import type { Product } from '../types';
 
 interface SupplierData {
@@ -39,6 +41,7 @@ export default function SupplierPage() {
   const supplierId = getSupplierIdFromParams(params);
   const [showMoreProductsOffered, setShowMoreProductsOffered] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const { data: savedSuppliers = [], toggleSavedSupplier } = useSavedSuppliers();
 
   // Fetch supplier data
   const { 
@@ -243,6 +246,47 @@ export default function SupplierPage() {
   const visibleProductsOffered = showMoreProductsOffered ? productsOffered : productsOffered.slice(0, maxProductsOfferedToShow);
   const hasMoreProductsOffered = productsOffered.length > maxProductsOfferedToShow;
 
+  const isSaved = savedSuppliers.some(item => item.id === supplier?.Supplier_ID);
+
+  const handleSaveClick = async () => {
+    if (!supplier) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Please log in to save suppliers');
+        return;
+      }
+      
+      const supplierData = {
+        id: supplier.Supplier_ID,
+        name: supplier.Supplier_Name,
+        description: supplier.ai_business_summary || '',
+        website: supplier.Supplier_Website || '',
+        email: supplier.Supplier_Email || '',
+        location: supplier.Supplier_Location || '',
+        whatsapp: supplier.Supplier_Whatsapp || '',
+        country: supplier.Countries.Country_Name || 'Unknown',
+        city: supplier.Supplier_Location || '',
+        sourceId: supplier.Supplier_Source_Name || ''
+      };
+      
+      await toggleSavedSupplier(supplierData);
+      toast.success(isSaved ? 'Supplier removed from saved suppliers' : 'Supplier saved successfully');
+      
+      analytics.trackEvent(isSaved ? 'supplier_unsaved' : 'supplier_saved', {
+        props: {
+          supplier_id: supplier.Supplier_ID,
+          supplier_name: supplier.Supplier_Name
+        }
+      });
+    } catch (error) {
+      console.error('Error saving supplier:', error);
+      toast.error('Failed to save supplier. Please try again.');
+    }
+  };
+
   return (
     <>
       <SEO 
@@ -336,6 +380,18 @@ export default function SupplierPage() {
                     </Button>
                   )}
                 </div>
+                
+                <button
+                  onClick={handleSaveClick}
+                  className={`px-6 py-3 rounded-md transition-colors flex items-center justify-center gap-2 ${
+                    isSaved 
+                      ? 'bg-gray-800 text-[#F4A024]' 
+                      : 'bg-gray-800 text-gray-300 hover:text-[#F4A024]'
+                  }`}
+                >
+                  <Bookmark className="w-5 h-5" fill={isSaved ? 'currentColor' : 'none'} />
+                  <span className="sr-only">{isSaved ? 'Remove from saved' : 'Save supplier'}</span>
+                </button>
               </div>
 
               {/* Related Terms */}

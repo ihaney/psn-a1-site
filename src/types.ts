@@ -53,3 +53,16 @@ export interface SearchTerm {
   updated_at?: string;
   imageUrl?: string; // Added for thumbnail display
 }
+
+export interface SavedSupplierItem {
+  id: string;
+  name: string;
+  description: string;
+  website: string;
+  email: string;
+  location: string;
+  whatsapp: string;
+  country: string;
+  city: string;
+  sourceId: string;
+}

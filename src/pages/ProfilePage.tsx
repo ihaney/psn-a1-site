@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MessageSquare, Bookmark, User, MapPin, Calendar, Mail } from 'lucide-react';
+import { MessageSquare, Bookmark, User, MapPin, Calendar, Mail, Building2 } from 'lucide-react';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useSavedItems } from '../hooks/useSavedItems';
+import { useSavedSuppliers } from '../hooks/useSavedSuppliers';
 import { useContactHistory } from '../hooks/useContactHistory';
 import Breadcrumbs from '../components/Breadcrumbs';
 
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { data: savedItems = [] } = useSavedItems();
+  const { data: savedSuppliers = [] } = useSavedSuppliers();
   const { data: messageHistory = [] } = useContactHistory();
 
   useEffect(() => {
@@ -163,12 +165,19 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-100 mb-4">Activity Summary</h2>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="bg-gray-700/30 rounded-lg p-4 text-center">
                     <div className="text-2xl font-bold text-[#F4A024] mb-1">
                       {savedItems.length}
                     </div>
                     <div className="text-sm text-gray-400">Saved Items</div>
+                  </div>
+                  
+                  <div className="bg-gray-700/30 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-[#F4A024] mb-1">
+                      {savedSuppliers.length}
+                    </div>
+                    <div className="text-sm text-gray-400">Saved Suppliers</div>
                   </div>
                   
                   <div className="bg-gray-700/30 rounded-lg p-4 text-center">
@@ -196,6 +205,21 @@ export default function ProfilePage() {
                   </Link>
                   
                   <Link
+                    to="/saved-suppliers"
+                    className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Building2 className="w-5 h-5 text-[#F4A024]" />
+                      <span className="text-gray-100">Saved Suppliers</span>
+                    </div>
+                    {savedSuppliers.length > 0 && (
+                      <span className="bg-[#F4A024] text-gray-900 text-xs px-2 py-1 rounded-full font-medium">
+                        {savedSuppliers.length}
+                      </span>
+                    )}
+                  </Link>
+                  
+                  <Link
                     to="/message-history"
                     className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors"
                   >
@@ -215,7 +239,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Recent Activity Section */}
-          {(savedItems.length > 0 || messageHistory.length > 0) && (
+          {(savedItems.length > 0 || savedSuppliers.length > 0 || messageHistory.length > 0) && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-8">
               <h2 className="text-xl font-semibold text-gray-100 mb-6">Recent Activity</h2>
               
@@ -249,6 +273,37 @@ export default function ProfilePage() {
                           className="block text-center text-[#F4A024] hover:text-[#F4A024]/80 text-sm py-2"
                         >
                           View all {savedItems.length} saved items
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {savedSuppliers.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-100 mb-4">Recently Saved Suppliers</h3>
+                    <div className="space-y-3">
+                      {savedSuppliers.slice(0, 3).map((supplier) => (
+                        <Link
+                          key={supplier.id}
+                          to={`/supplier/${supplier.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/${supplier.id}`}
+                          className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors"
+                        >
+                          <div className="w-12 h-12 bg-[#F4A024]/10 rounded-lg flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-[#F4A024]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-gray-100 font-medium truncate">{supplier.name}</p>
+                            <p className="text-sm text-gray-400">{supplier.country}</p>
+                          </div>
+                        </Link>
+                      ))}
+                      {savedSuppliers.length > 3 && (
+                        <Link
+                          to="/saved-suppliers"
+                          className="block text-center text-[#F4A024] hover:text-[#F4A024]/80 text-sm py-2"
+                        >
+                          View all {savedSuppliers.length} saved suppliers
                         </Link>
                       )}
                     </div>

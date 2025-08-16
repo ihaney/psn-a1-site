@@ -13,6 +13,7 @@ const SuppliersListPage = React.lazy(() => import('./pages/SuppliersListPage'));
 const SourcesListPage = React.lazy(() => import('./pages/SourcesListPage'));
 const CountriesListPage = React.lazy(() => import('./pages/CountriesListPage'));
 const SavedItemsPage = React.lazy(() => import('./pages/SavedItemsPage'));
+const SavedSuppliersPage = React.lazy(() => import('./pages/SavedSuppliersPage'));
 const MessageHistoryPage = React.lazy(() => import('./pages/MessageHistoryPage'));
 const RFQTemplatePage = React.lazy(() => import('./pages/RFQTemplatePage'));
 const TariffCalculatorPage = React.lazy(() => import('./pages/TariffCalculatorPage'));
@@ -74,6 +75,10 @@ const routes: RouteObject[] = [
   {
     path: '/saved-items',
     element: <SavedItemsPage />
+  },
+  {
+    path: '/saved-suppliers',
+    element: <SavedSuppliersPage />
   },
   {
     path: '/message-history',

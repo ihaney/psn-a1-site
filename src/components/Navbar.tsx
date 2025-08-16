@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Search, Menu, ChevronDown, X, Bookmark, UserCircle, MessageSquare } from 'lucide-react';
+import { Search, Menu, ChevronDown, X, Bookmark, UserCircle, MessageSquare, Building2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { analytics } from '../lib/analytics';
 import SearchModal from './SearchModal';
 import { useSavedItems } from '../hooks/useSavedItems';
+import { useSavedSuppliers } from '../hooks/useSavedSuppliers';
 import { useContactHistory } from '../hooks/useContactHistory';
 import AuthModal from './AuthModal';
 import toast from 'react-hot-toast';
@@ -23,6 +24,7 @@ export default function Navbar() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const { data: savedItems = [] } = useSavedItems();
+  const { data: savedSuppliers = [] } = useSavedSuppliers();
   const { data: contactHistory = [] } = useContactHistory();
   const [user, setUser] = useState<any>(null);
   const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -425,6 +427,16 @@ export default function Navbar() {
                         >
                           View Profile
                         </Link>
+                        <Link
+                          to="/saved-suppliers"
+                          className="block px-4 py-2 text-sm text-gray-300 hover:text-[#F4A024] hover:bg-gray-700"
+                          onClick={() => {
+                            setActiveDropdown(null);
+                            trackNavigation('profile', 'saved-suppliers');
+                          }}
+                        >
+                          Saved Suppliers
+                        </Link>
                         <button
                           onClick={() => {
                             handleSignOut();
@@ -476,6 +488,23 @@ export default function Navbar() {
                 )}
                 <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                   Saved Items
+                </span>
+              </Link>
+
+              <Link 
+                to="/saved-suppliers"
+                className="text-gray-300 hover:text-gray-100 p-2 rounded-full relative group"
+                onClick={() => handleIconClick('saved-suppliers')}
+                aria-label="Saved Suppliers"
+              >
+                <Building2 className="w-5 h-5" />
+                {user && savedSuppliers.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#F4A024] text-gray-900 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {savedSuppliers.length}
+                  </span>
+                )}
+                <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  Saved Suppliers
                 </span>
               </Link>
 
