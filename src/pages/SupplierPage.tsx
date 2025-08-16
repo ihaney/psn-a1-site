@@ -397,17 +397,6 @@ export default function SupplierPage() {
                   )}
                 </div>
                 
-                <button
-                  onClick={handleSaveClick}
-                  className={`px-6 py-3 rounded-md transition-colors flex items-center justify-center gap-2 ${
-                    isSaved 
-                      ? 'bg-gray-800 text-[#F4A024]' 
-                      : 'bg-gray-800 text-gray-300 hover:text-[#F4A024]'
-                  }`}
-                >
-                  <Bookmark className="w-5 h-5" fill={isSaved ? 'currentColor' : 'none'} />
-                  <span className="sr-only">{isSaved ? 'Remove from saved' : 'Save supplier'}</span>
-                </button>
               </div>
 
               {/* Related Terms */}
