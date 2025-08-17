@@ -16,7 +16,8 @@ export default function WorldMap({ countryData }: WorldMapProps) {
   useEffect(() => {
     async function fetchGeoJSON() {
       try {
-        const response = await fetch('/ne_50m_admin_0_countries.json'); // Path to your GeoJSON file
+        // Corrected path to your GeoJSON file
+        const response = await fetch('/GEOJSON/ne_50m_admin_0_countries.json'); 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
