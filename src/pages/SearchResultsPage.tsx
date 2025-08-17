@@ -63,11 +63,32 @@ export default function SearchResultsPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>({});
+  const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>(() => {
+    const initialFilters: { [key: string]: string[] } = {};
+    
+    if (initialCategory) {
+      initialFilters['category'] = [initialCategory];
+    }
+    if (initialCountry) {
+      if (initialMode === 'products') {
+        initialFilters['country'] = [initialCountry];
+      } else {
+        initialFilters['Supplier_Country_Name'] = [initialCountry];
+      }
+    }
+    if (initialSource) {
+      if (initialMode === 'products') {
+        initialFilters['source'] = [initialSource];
+      } else {
+        initialFilters['Supplier_Source_ID'] = [initialSource];
+      }
+    }
+    
+    return initialFilters;
+  });
   const [sortBy, setSortBy] = useState('relevance');
-  const [facetDistribution, setFacetDistribution] = useState<any>(null);
+  const [facetDistribution, setFacetDistribution] = useState<any>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [totalResults, setTotalResults] = useState(0);
 
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
@@ -90,31 +111,6 @@ export default function SearchResultsPage() {
     staleTime: Infinity,
   });
 
-  // Initialize filters from URL params
-  useEffect(() => {
-    const initialFilters: { [key: string]: string[] } = {};
-    
-    if (initialCategory) {
-      initialFilters['Product_Category_ID'] = [initialCategory];
-    }
-    if (initialCountry) {
-      if (searchMode === 'products') {
-        initialFilters['Product_Country_Name'] = [initialCountry];
-      } else {
-        initialFilters['Supplier_Country_Name'] = [initialCountry];
-      }
-    }
-    if (initialSource) {
-      if (searchMode === 'products') {
-        initialFilters['Product_Source_Name'] = [initialSource];
-      } else {
-        initialFilters['Supplier_Source_ID'] = [initialSource];
-      }
-    }
-    
-    setActiveFilters(initialFilters);
-  }, [initialCategory, initialCountry, initialSource, searchMode]);
-
   // Update URL params when search state changes
   useEffect(() => {
     const params = new URLSearchParams();
@@ -128,8 +124,7 @@ export default function SearchResultsPage() {
     async function performSearch() {
       if (!debouncedQuery.trim()) {
         setResults([]);
-        setFacetDistribution(null);
-        setTotalResults(0);
+        setFacetDistribution({});
         return;
       }
 
@@ -189,7 +184,6 @@ export default function SearchResultsPage() {
             url: `/product/${hit.id}`
           }));
           setFacetDistribution(productsResults.facetDistribution);
-          setTotalResults(productsResults.estimatedTotalHits || productsResults.hits.length);
 
         } else { // searchMode === 'suppliers'
           facets = ['Supplier_Country_Name', 'Supplier_Source_ID'];
@@ -218,7 +212,6 @@ export default function SearchResultsPage() {
             url: createSupplierUrl(hit.Supplier_Title as string, hit.Supplier_ID as string)
           }));
           setFacetDistribution(suppliersResults.facetDistribution);
-          setTotalResults(suppliersResults.estimatedTotalHits || suppliersResults.hits.length);
         }
 
         setResults(searchResults);
@@ -228,8 +221,7 @@ export default function SearchResultsPage() {
         console.error('Search error:', err);
         setError('Failed to perform search. Please try again.');
         setResults([]);
-        setFacetDistribution(null);
-        setTotalResults(0);
+        setFacetDistribution({});
       } finally {
         setLoading(false);
       }
@@ -259,75 +251,75 @@ export default function SearchResultsPage() {
   }, []);
 
   const filterGroups: FilterGroup[] = useMemo(() => {
-    if (!facetDistribution) return [];
-
     const groups: FilterGroup[] = [];
 
     if (searchMode === 'products') {
       // Categories
-      if (facetDistribution['Product_Category_Name']) {
-        groups.push({
-          title: 'Category Type',
-          key: 'Product_Category_Name',
-          options: Object.entries(facetDistribution['Product_Category_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Category_Name'] || [],
-        });
-      }
+      groups.push({
+        title: 'Category Type',
+        key: 'category',
+        options: Object.entries(facetDistribution['category'] || {}).map(([name, count]) => ({
+          id: name,
+          name: name,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['category'] || [],
+      });
+
       // Supplier Country
-      if (facetDistribution['Product_Country_Name']) {
-        groups.push({
-          title: 'Supplier Country',
-          key: 'Product_Country_Name',
-          options: Object.entries(facetDistribution['Product_Country_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Country_Name'] || [],
-        });
-      }
+      groups.push({
+        title: 'Supplier Country',
+        key: 'country',
+        options: Object.entries(facetDistribution['country'] || {}).map(([name, count]) => ({
+          id: name,
+          name: name,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['country'] || [],
+      });
+
       // Sources
-      if (facetDistribution['Product_Source_Name']) {
-        groups.push({
-          title: 'Sources',
-          key: 'Product_Source_Name',
-          options: Object.entries(facetDistribution['Product_Source_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Source_Name'] || [],
-        });
-      }
+      groups.push({
+        title: 'Sources',
+        key: 'source',
+        options: Object.entries(facetDistribution['source'] || {}).map(([name, count]) => ({
+          id: name,
+          name: name,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['source'] || [],
+      });
     } else { // searchMode === 'suppliers'
       // Supplier Country
-      if (facetDistribution['Supplier_Country_Name']) {
-        groups.push({
-          title: 'Supplier Country',
-          key: 'Supplier_Country_Name',
-          options: Object.entries(facetDistribution['Supplier_Country_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Supplier_Country_Name'] || [],
-        });
-      }
-      // Sources (using Product_Source_Name for consistency)
-      if (facetDistribution['Product_Source_Name']) {
+      groups.push({
+        title: 'Supplier Country',
+        key: 'Supplier_Country_Name',
+        options: Object.entries(facetDistribution['Supplier_Country_Name'] || {}).map(([name, count]) => ({
+          id: name,
+          name: name,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['Supplier_Country_Name'] || [],
+      });
+
+      // Sources
+      if (facetDistribution['Supplier_Source_ID'] && allSourcesMap) {
         groups.push({
           title: 'Sources',
-          key: 'Product_Source_Name',
-          options: Object.entries(facetDistribution['Product_Source_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
+          key: 'Supplier_Source_ID',
+          options: Object.entries(facetDistribution['Supplier_Source_ID'] || {}).map(([id, count]) => ({
+            id: id,
+            name: allSourcesMap[id] || id,
             count: count as number,
           })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Source_Name'] || [],
+          selected: activeFilters['Supplier_Source_ID'] || [],
+        });
+      } else {
+        groups.push({
+          title: 'Sources',
+          key: 'Supplier_Source_ID',
+          options: [],
+          selected: activeFilters['Supplier_Source_ID'] || [],
         });
       }
     }
@@ -359,6 +351,10 @@ export default function SearchResultsPage() {
     return Object.values(activeFilters).reduce((total, filters) => total + filters.length, 0);
   }, [activeFilters]);
 
+  const totalActiveFilters = useMemo(() => {
+    return Object.values(activeFilters).reduce((total, filters) => total + filters.length, 0);
+  }, [activeFilters]);
+
   return (
     <>
       <SEO
@@ -368,7 +364,7 @@ export default function SearchResultsPage() {
       />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <Breadcrumbs currentPageTitle={`Search Results for "${initialQuery}"`} />
+          <Breadcrumbs currentPageTitle={`Search Results for "${searchQuery}"`} />
 
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left Column: Filters */}
@@ -386,15 +382,8 @@ export default function SearchResultsPage() {
                   )}
                 </div>
                 
-                {loading && !facetDistribution ? (
-                  <div className="flex justify-center py-4">
-                    <LoadingSpinner />
-                  </div>
-                ) : filterGroups.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No filters available for this search.</p>
-                ) : (
-                  <div className="space-y-6">
-                    {filterGroups.map(group => (
+                <div className="space-y-6">
+                  {filterGroups.map(group => (
                       <div key={group.key} className="border-b border-gray-700 pb-4 last:border-b-0">
                         <button
                           onClick={() => setActiveDropdown(activeDropdown === group.key ? null : group.key)}
@@ -410,7 +399,7 @@ export default function SearchResultsPage() {
                           </span>
                           <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === group.key ? 'rotate-180' : ''}`} />
                         </button>
-                        {(activeDropdown === group.key || group.selected.length > 0) && (
+                        {activeDropdown === group.key && (
                           <div className="mt-3 space-y-2 max-h-64 overflow-y-auto">
                             {group.options.length > 0 ? (
                               group.options.map(option => (
@@ -433,9 +422,8 @@ export default function SearchResultsPage() {
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -471,7 +459,7 @@ export default function SearchResultsPage() {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-100">
-                    Showing {results.length}+ {searchMode} for "{initialQuery}"
+                    Showing {results.length} {searchMode} for "{searchQuery}"
                   </h1>
                   {totalActiveFilters > 0 && (
                     <p className="text-gray-400 text-sm mt-1">
