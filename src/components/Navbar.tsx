@@ -491,22 +491,6 @@ export default function Navbar() {
                 </span>
               </Link>
 
-              <Link 
-                to="/saved-suppliers"
-                className="text-gray-300 hover:text-gray-100 p-2 rounded-full relative group"
-                onClick={() => handleIconClick('saved-suppliers')}
-                aria-label="Saved Suppliers"
-              >
-                <Building2 className="w-5 h-5" />
-                {user && savedSuppliers.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#F4A024] text-gray-900 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                    {savedSuppliers.length}
-                  </span>
-                )}
-                <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  Saved Suppliers
-                </span>
-              </Link>
 
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
