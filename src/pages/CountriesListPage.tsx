@@ -12,6 +12,7 @@ interface CountryListItem {
   Country_Image: string | null;
   product_count: number;
   supplier_count: number;
+  sources_count: number;
   latitude?: number;
   longitude?: number;
 }
@@ -43,10 +44,19 @@ export default function CountriesListPage() {
                 .eq('Supplier_Country_ID', country.Country_ID)
             ]);
 
+            // Get unique sources count for this country
+            const { data: sourcesData } = await supabase
+              .from('Products')
+              .select('Product_Source_ID')
+              .eq('Product_Country_ID', country.Country_ID);
+            
+            const uniqueSources = new Set(sourcesData?.map(p => p.Product_Source_ID).filter(Boolean));
+
             return {
               ...country,
               product_count: productCount || 0,
               supplier_count: supplierCount || 0,
+              sources_count: uniqueSources.size,
               latitude: country.latitude,
               longitude: country.longitude
             };
@@ -119,6 +129,9 @@ export default function CountriesListPage() {
                   </p>
                   <p className="text-sm text-gray-400">
                     {country.supplier_count} {country.supplier_count === 1 ? 'supplier' : 'suppliers'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {country.sources_count} {country.sources_count === 1 ? 'source' : 'sources'}
                   </p>
                   {country.latitude && country.longitude && (
                     <p className="text-xs text-[#F4A024]">

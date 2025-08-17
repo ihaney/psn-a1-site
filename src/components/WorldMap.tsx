@@ -27,8 +27,10 @@ const customIcon = new L.Icon({
 interface CountryData {
   Country_ID: string;
   Country_Title: string;
+  Country_Image: string | null;
   product_count: number;
   supplier_count: number;
+  sources_count: number;
   latitude?: number;
   longitude?: number;
 }
@@ -179,34 +181,38 @@ export default function WorldMap({ countryData }: WorldMapProps) {
               key={country.Country_ID} 
               position={[country.latitude, country.longitude]}
               icon={customIcon}
-              eventHandlers={{
-                click: () => {
-                  console.log('Marker clicked for:', country.Country_Title);
-                  navigate(`/search?country=${country.Country_ID}`);
-                },
-              }}
             >
               <Popup>
-                <div className="text-gray-900 min-w-[200px]">
-                  <h3 className="font-bold text-lg mb-2 text-[#F4A024]">
-                    {country.Country_Title}
-                  </h3>
-                  <div className="space-y-1 mb-3">
-                    <p className="flex justify-between">
-                      <span>Products:</span>
-                      <span className="font-semibold">{country.product_count.toLocaleString()}</span>
+                <div 
+                  className="text-gray-900 min-w-[280px] cursor-pointer bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 hover:bg-gray-700/50 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/search?country=${country.Country_ID}`);
+                  }}
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    {country.Country_Image && (
+                      <img
+                        src={country.Country_Image}
+                        alt={country.Country_Title}
+                        className="w-12 h-12 object-contain rounded-full"
+                      />
+                    )}
+                    <h2 className="text-xl font-semibold text-gray-100">
+                      {country.Country_Title}
+                    </h2>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-400">
+                      {country.product_count} {country.product_count === 1 ? 'product' : 'products'}
                     </p>
-                    <p className="flex justify-between">
-                      <span>Suppliers:</span>
-                      <span className="font-semibold">{country.supplier_count.toLocaleString()}</span>
+                    <p className="text-sm text-gray-400">
+                      {country.supplier_count} {country.supplier_count === 1 ? 'supplier' : 'suppliers'}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {country.sources_count} {country.sources_count === 1 ? 'source' : 'sources'}
                     </p>
                   </div>
-                  <button 
-                    onClick={() => navigate(`/search?country=${country.Country_ID}`)}
-                    className="w-full bg-[#F4A024] text-white px-3 py-2 rounded-md hover:bg-[#F4A024]/90 transition-colors text-sm font-medium"
-                  >
-                    View Products & Suppliers
-                  </button>
                 </div>
               </Popup>
             </Marker>
