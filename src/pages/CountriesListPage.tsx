@@ -91,37 +91,6 @@ export default function CountriesListPage() {
           <div className="mb-8"> {/* Add some margin below the map */}
             <WorldMap countryData={countries} /> {/* <--- Pass the countries data */}
           </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {countries.map((country) => (
-              <div
-                key={country.Country_ID}
-                onClick={() => handleCountryClick(country.Country_ID)}
-                className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 cursor-pointer hover:bg-gray-700/50 transition-all"
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  {country.Country_Image && (
-                    <img
-                      src={country.Country_Image}
-                      alt={country.Country_Title}
-                      className="w-12 h-12 object-contain rounded-full"
-                    />
-                  )}
-                  <h2 className="text-xl font-semibold text-gray-100">
-                    {country.Country_Title}
-                  </h2>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-400">
-                    {country.product_count} {country.product_count === 1 ? 'product' : 'products'}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    {country.supplier_count} {country.supplier_count === 1 ? 'supplier' : 'suppliers'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </>
