@@ -157,7 +157,7 @@
        // Categories
 -      if (facetDistribution['Product_Category_Name']) {
 -        groups.push({
--          title: 'Category',
+-          title: 'Category Type',
 -          key: 'Product_Category_Name',
 -          options: Object.entries(facetDistribution['Product_Category_Name']).map(([name, count]) => ({
 -            id: name,
