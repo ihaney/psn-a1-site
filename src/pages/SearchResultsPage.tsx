@@ -95,18 +95,18 @@ export default function SearchResultsPage() {
     const initialFilters: { [key: string]: string[] } = {};
     
     if (initialCategory) {
-      initialFilters['category'] = [initialCategory];
+      initialFilters['Product_Category_ID'] = [initialCategory];
     }
     if (initialCountry) {
       if (searchMode === 'products') {
-        initialFilters['country'] = [initialCountry];
+        initialFilters['Product_Country_Name'] = [initialCountry];
       } else {
         initialFilters['Supplier_Country_Name'] = [initialCountry];
       }
     }
     if (initialSource) {
       if (searchMode === 'products') {
-        initialFilters['source'] = [initialSource];
+        initialFilters['Product_Source_Name'] = [initialSource];
       } else {
         initialFilters['Supplier_Source_ID'] = [initialSource];
       }
@@ -114,6 +114,14 @@ export default function SearchResultsPage() {
     
     setActiveFilters(initialFilters);
   }, [initialCategory, initialCountry, initialSource, searchMode]);
+
+  // Update URL params when search state changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    if (searchMode) params.set('mode', searchMode);
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [searchQuery, searchMode, navigate]);
 
   // Perform search when debounced query, mode, filters, or sort order changes
   useEffect(() => {
@@ -229,349 +237,41 @@ export default function SearchResultsPage() {
 
     performSearch();
   }, [debouncedQuery, searchMode, activeFilters, sortBy, allSourcesMap]);
-
-  const handleFilterChange = useCallback((filterKey: string, value: string) => {
-    setActiveFilters(prev => {
-      const currentSelection = prev[filterKey] || [];
-      if (currentSelection.includes(value)) {
-        return { ...prev, [filterKey]: currentSelection.filter(item => item !== value) };
-      } else {
-        return { ...prev, [filterKey]: [...currentSelection, value] };
-      }
-    });
-    
-    analytics.trackEvent('search_filter_applied', {
-      props: {
-        filter_type: filterKey,
-        filter_value: value,
-        search_mode: searchMode
-      }
-    });
-  }, [searchMode]);
-
-  const handleSortChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortBy(e.target.value);
-    analytics.trackEvent('search_sort_changed', {
-      props: {
-        sort_by: e.target.value,
-        search_mode: searchMode
-      }
-    });
-  }, [searchMode]);
-
-  const handleSearchModeChange = useCallback((mode: 'products' | 'suppliers') => {
-    setSearchMode(mode);
-    setActiveFilters({});
-    setSortBy('relevance');
-    analytics.trackEvent('search_mode_changed', {
-      props: { mode }
-    });
-  }, []);
-
-  const filterGroups: FilterGroup[] = useMemo(() => {
-    if (!facetDistribution) return [];
-
-    const groups: FilterGroup[] = [];
-
-    if (searchMode === 'products') {
-      // Categories
-      if (facetDistribution['category']) {
-        groups.push({
-          title: 'Category Type',
-          key: 'category',
-          options: Object.entries(facetDistribution['category']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['category'] || [],
-        });
-      }
-      // Supplier Country
-      if (facetDistribution['country']) {
-        groups.push({
-          title: 'Supplier Country',
-          key: 'country',
-          options: Object.entries(facetDistribution['country']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['country'] || [],
-        });
-      }
-      // Sources
-      if (facetDistribution['source']) {
-        groups.push({
-          title: 'Sources',
-          key: 'source',
-          options: Object.entries(facetDistribution['source']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['source'] || [],
-        });
-      }
-    } else { // searchMode === 'suppliers'
-      // Supplier Country
-      if (facetDistribution['Supplier_Country_Name']) {
-        groups.push({
-          title: 'Supplier Country',
-          key: 'Supplier_Country_Name',
-          options: Object.entries(facetDistribution['Supplier_Country_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Supplier_Country_Name'] || [],
-        });
-      }
-      // Sources (using Product_Source_Name for consistency)
-      if (facetDistribution['Supplier_Source_ID'] && allSourcesMap) {
-        groups.push({
-          title: 'Sources',
-          key: 'Supplier_Source_ID',
-          options: Object.entries(facetDistribution['Supplier_Source_ID']).map(([id, count]) => ({
-            id: id,
-            name: allSourcesMap[id] || id,
-            count: count as number,
-          })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Supplier_Source_ID'] || [],
-        });
-      }
-    }
-
-    return groups;
-  }, [facetDistribution, searchMode, activeFilters, allSourcesMap]);
-
-  const sortOptions = useMemo(() => {
-    if (searchMode === 'products') {
-      return [
-        { value: 'relevance', label: 'Relevance' },
-        { value: 'price:asc', label: 'Price: Low to High' },
-        { value: 'price:desc', label: 'Price: High to Low' },
-      ];
-    } else { // searchMode === 'suppliers'
-      return [
-        { value: 'relevance', label: 'Relevance' },
-        { value: 'product_count:desc', label: 'Product Count: High to Low' },
-        { value: 'product_count:asc', label: 'Product Count: Low to High' },
-      ];
-    }
-  }, [searchMode]);
-
-  const clearAllFilters = useCallback(() => {
-    setActiveFilters({});
-    analytics.trackEvent('search_filters_cleared', {
-      props: { search_mode: searchMode }
-    });
-  }, [searchMode]);
-
-  const hasActiveFilters = Object.values(activeFilters).some(filters => filters.length > 0);
-
-  return (
-    <>
-      <SEO
-        title={`Search Results for "${initialQuery}"`}
-        description={`Explore ${searchMode} related to "${initialQuery}" on Paisán. Find Latin American products and suppliers.`}
-        keywords={`${initialQuery}, ${searchMode}, Latin American products, suppliers, marketplace`}
-      />
-      <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <Breadcrumbs currentPageTitle={`Search Results for "${initialQuery}"`} />
-
-          {/* Search Mode Toggle */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => handleSearchModeChange('products')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                searchMode === 'products'
-                  ? 'bg-[#F4A024] text-gray-900 border-b-2 border-[#F4A024]'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              Products
-            </button>
-            <button
-              onClick={() => handleSearchModeChange('suppliers')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                searchMode === 'suppliers'
-                  ? 'bg-[#F4A024] text-gray-900 border-b-2 border-[#F4A024]'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              Suppliers
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Left Column: Filters */}
-            <div className="lg:col-span-1">
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 sticky top-24">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-100">Filters</h2>
-                  {hasActiveFilters && (
-                    <button
-                      onClick={clearAllFilters}
-                      className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-                
-                {loading && !facetDistribution ? (
-                  <div className="flex justify-center py-4">
-                    <LoadingSpinner />
-                  </div>
-                ) : filterGroups.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No filters available for this search.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {filterGroups.map(group => (
-                      <div key={group.key} className="border-b border-gray-700/50 pb-4 last:border-b-0">
-                        <button
-                          onClick={() => setActiveDropdown(activeDropdown === group.key ? null : group.key)}
-                          className="w-full flex items-center justify-between text-gray-300 hover:text-gray-100 py-2 text-base font-medium"
-                        >
-                          <span>{group.title}</span>
-                          <div className="flex items-center gap-2">
-                            {group.selected.length > 0 && (
-                              <span className="bg-[#F4A024] text-gray-900 text-xs px-2 py-1 rounded-full font-medium">
-                                {group.selected.length}
-                              </span>
-                            )}
-                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === group.key ? 'rotate-180' : ''}`} />
-                          </div>
-                        </button>
-                        {activeDropdown === group.key && (
-                          <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
-                            {group.options.length > 0 ? (
-                              group.options.map(option => (
-                                <label key={option.id} className="flex items-center justify-between text-gray-300 text-sm cursor-pointer hover:bg-gray-700/30 p-2 rounded">
-                                  <div className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={group.selected.includes(option.id)}
-                                      onChange={() => handleFilterChange(group.key, option.id)}
-                                      className="rounded border-gray-600 text-[#F4A024] focus:ring-[#F4A024] w-4 h-4"
-                                    />
-                                    <span className="ml-2 truncate">{option.name}</span>
-                                  </div>
-                                  <span className="text-gray-400 text-xs ml-2">{option.count}</span>
-                                </label>
-                              ))
-                            ) : (
-                              <p className="text-gray-500 text-xs">No options available.</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Results and Sorting */}
-            <div className="lg:col-span-3">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-100">
-                    Showing {totalResults.toLocaleString()}+ {searchMode} from global suppliers for "{initialQuery}"
-                  </h1>
-                  {hasActiveFilters && (
-                    <p className="text-gray-400 text-sm mt-1">
-                      Filtered results • <button onClick={clearAllFilters} className="text-[#F4A024] hover:text-[#F4A024]/80">Clear filters</button>
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400 text-sm">Sort by:</span>
-                  <div className="relative">
-                    <select
-                      value={sortBy}
-                      onChange={handleSortChange}
-                      className="appearance-none bg-gray-800/50 text-gray-300 py-2 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A024] cursor-pointer text-sm border border-gray-700"
-                    >
-                      {sortOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {loading && results.length === 0 ? (
-                <div className="flex justify-center py-12">
-                  <LoadingSpinner />
-                </div>
-              ) : error ? (
-                <div className="text-center py-12">
-                  <p className="text-red-500 font-bold">Error: {error}</p>
-                  <p className="text-gray-300">Please try again later.</p>
-                </div>
-              ) : results.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-300 font-bold">No {searchMode} found for "{initialQuery}"</p>
-                  {hasActiveFilters ? (
-                    <p className="text-gray-400 text-sm mt-2">
-                      Try adjusting your filters or <button onClick={clearAllFilters} className="text-[#F4A024] hover:text-[#F4A024]/80">clear all filters</button>
-                    </p>
-                  ) : (
-                    <p className="text-gray-400 text-sm mt-2">Try different keywords or browse our categories.</p>
-                  )}
-                </div>
-              ) : (
-                <div className={`grid gap-6 ${searchMode === 'products' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                  {results.map(result => (
-                    result.type === 'product' ? (
-                      <ProductCard 
-                        key={result.id} 
-                        product={{
-                          id: result.id,
-                          name: result.name,
-                          Product_Price: result.price || '$0',
-                          image: result.image || '',
-                          country: result.country || 'Unknown',
-                          category: result.category || 'Unknown',
-                          supplier: result.supplier || 'Unknown',
-                          Product_MOQ: result.moq || 'N/A',
-                          sourceUrl: result.url,
-                          marketplace: result.marketplace || 'Unknown'
-                        }} 
-                      />
-                    ) : (
-                      <SupplierCard
-                        key={result.id}
-                        supplier={{
-                          Supplier_ID: result.id,
-                          Supplier_Title: result.name,
-                          Supplier_Description: result.description || '',
-                          Supplier_Country_Name: result.country || 'Unknown',
-                          Supplier_City_Name: result.location || '',
-                          Supplier_Location: result.location || '',
-                          Supplier_Source_ID: result.sourceId || '',
-                          product_keywords: result.productKeywords || '',
-                          Supplier_Website: '',
-                          Supplier_Email: '',
-                          Supplier_Whatsapp: '',
-                        }}
-                      />
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
 }
+
+2.  **Create Filter Sidebar Component**:
+    *   **Filter Groups**: Create a `useMemo` hook to generate filter groups based on `facetDistribution`, `searchMode`, and `allSourcesMap`.
+    *   **Filter Order**:
+        *   For **Product Search Mode**:
+            1.  **Category Type**: Use `facetDistribution['category']` to create options.
+            2.  **Supplier Country**: Use `facetDistribution['country']` to create options.
+            3.  **Sources**: Use `facetDistribution['source']` to create options.
+        *   For **Supplier Search Mode**:
+            1.  **Supplier Country**: Use `facetDistribution['Supplier_Country_Name']` to create options.
+            2.  **Sources**: Use `facetDistribution['Supplier_Source_ID']` and map IDs to titles using `allSourcesMap`.
+    *   **Interaction**: Implement `handleFilterChange` function to toggle filter selections and update `activeFilters` state.
+    *   **UI**: Each filter group will have a collapsible section with checkboxes for individual options and counts displayed next to each option name.
+
+3.  **Create Sorting Controls Component**:
+    *   **Sorting Options**: Create a `useMemo` hook to generate sorting options based on `searchMode`.
+    *   **For Product Search Mode**:
+        *   "Relevance" (default)
+        *   "Price: Low to High"
+        *   "Price: High to Low"
+    *   **For Supplier Search Mode**:
+        *   "Relevance" (default)
+        *   "Product Count: High to Low"
+        *   "Product Count: Low to High"
+    *   **Interaction**: Implement `handleSortChange` function to update `sortBy` state when a new sorting option is selected.
+
+4.  **Update Layout and Styling**:
+    *   **Two-Column Layout**: Use CSS Grid or Flexbox to create a responsive two-column layout.
+    *   **Filter Sidebar Styling**: Style the left column with a background, padding, and appropriate spacing for filter groups.
+    *   **Results Column Styling**: Ensure the right column has proper spacing and alignment for the sorting controls and search results grid.
+    *   **Responsive Design**: Ensure the layout works well on mobile devices, potentially stacking the columns vertically on smaller screens.
+
+5.  **Handle URL Parameters and Navigation**:
+    *   **URL Sync**: Update the URL parameters when filters or sorting options change, allowing users to bookmark or share filtered search results.
+    *   **Initial State**: Parse URL parameters on component mount to set initial filter and sorting states.
+
+<boltArtifact id="implement-search-results-redesign" title="Implement search results page redesign with filters and sorting">
