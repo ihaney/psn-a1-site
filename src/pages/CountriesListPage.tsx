@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/CountriesListPage.tsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Breadcrumbs from '../components/Breadcrumbs';
+import WorldMap from '../components/WorldMap'; // <--- Add this import
 
 interface CountryListItem {
   Country_ID: string;
@@ -84,6 +86,11 @@ export default function CountriesListPage() {
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <Breadcrumbs currentPageTitle="Countries" />
+
+          {/* Add the WorldMap component here */}
+          <div className="mb-8"> {/* Add some margin below the map */}
+            <WorldMap countryData={countries} /> {/* <--- Pass the countries data */}
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {countries.map((country) => (
