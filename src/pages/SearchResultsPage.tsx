@@ -1,1361 +1,574 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Search, ChevronDown, Package, Building2 } from 'lucide-react';
 import SEO from '../components/SEO';
-import { supabase } from '../lib/supabase';
-import { productsIndex, suppliersIndex } from '../lib/meilisearch';
 import ProductCard from '../components/ProductCard';
 import SupplierCard from '../components/SupplierCard';
-import StandardFilters from '../components/StandardFilters';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Breadcrumbs from '../components/Breadcrumbs';
-import type { Product } from '../types';
-import { logError } from '../lib/errorLogging';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { productsIndex, suppliersIndex } from '../lib/meilisearch';
+import { supabase } from '../lib/supabase';
 import { logSearchQuery } from '../lib/searchLogger';
+import { createSupplierUrl } from '../utils/urlHelpers';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { analytics } from '../lib/analytics';
-import { Package, Building2 } from 'lucide-react';
+
+interface SearchResult {
+  id: string;
+  name: string;
+  type: 'product' | 'supplier';
+  image?: string;
+  country?: string;
+  category?: string;
+  supplier?: string;
+  marketplace?: string;
+  price?: string;
+  moq?: string;
+  product_count?: number;
+  description?: string;
+  location?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  productKeywords?: string;
+  url: string;
+}
 
 interface FilterOption {
   id: string;
-  title: string;
+  name: string;
   count: number;
 }
 
 interface FilterGroup {
   title: string;
+  key: string;
   options: FilterOption[];
   selected: string[];
 }
 
-interface Supplier {
-  Supplier_ID: string;
-  Supplier_Title: string;
-  Supplier_Description?: string;
-  Supplier_Country_Name?: string;
-  Supplier_City_Name?: string;
-  Supplier_Location?: string;
-  product_count?: number;
-  product_keywords?: string;
-  sourceTitle?: string;
-}
-
 export default function SearchResultsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const query = searchParams.get('q') || '';
-  const mode = searchParams.get('mode') || 'products';
-  const categoryId = searchParams.get('category');
-  const source = searchParams.get('source');
-  const country = searchParams.get('country');
-  
-  const [results, setResults] = useState<(Product | Supplier)[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState<number>(0);
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
+  const initialQuery = queryParams.get('q') || '';
+  const initialMode = (queryParams.get('mode') as 'products' | 'suppliers') || 'products';
+  const initialCategory = queryParams.get('category') || '';
+  const initialCountry = queryParams.get('country') || '';
+  const initialSource = queryParams.get('source') || '';
+
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [searchMode, setSearchMode] = useState<'products' | 'suppliers'>(initialMode);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>({});
+  const [sortBy, setSortBy] = useState('relevance');
+  const [facetDistribution, setFacetDistribution] = useState<any>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [categoryName, setCategoryName] = useState<string>('');
-  const [sourceName, setSourceName] = useState<string>('');
-  const [countryName, setCountryName] = useState<string>('');
-  const [sortBy, setSortBy] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
-  const [currentDisplayMode, setCurrentDisplayMode] = useState<'products' | 'suppliers'>(
-    mode === 'suppliers' ? 'suppliers' : 'products'
-  );
-  const queryClient = useQueryClient();
-  
-  const [filters, setFilters] = useState<{
-    categories: FilterGroup;
-    suppliers: FilterGroup;
-    sources: FilterGroup;
-    countries: FilterGroup;
-  }>({
-    categories: { title: 'Categories', options: [], selected: [] },
-    suppliers: { title: 'Suppliers', options: [], selected: [] },
-    sources: { title: 'Sources', options: [], selected: [] },
-    countries: { title: 'Countries', options: [], selected: [] }
-  });
+  const [totalResults, setTotalResults] = useState(0);
 
-  // Infinite scroll state
-  const [currentPage, setCurrentPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const ITEMS_PER_PAGE = 100;
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
 
-  // Use react-query to fetch search results
-  const { data: searchData, isLoading: searchLoading, error: searchError } = useQuery({
-    queryKey: ['searchResults', { 
-      query, 
-      mode: currentDisplayMode, 
-      categoryId, 
-      source, 
-      country 
-    }],
+  // Fetch all sources for mapping Supplier_Source_ID to Source_Title
+  const { data: allSourcesMap } = useQuery({
+    queryKey: ['allSourcesMap'],
     queryFn: async () => {
-      // This function will be called when the query key changes
-      // or when the data is stale
-      
-      let productsData: any[] = [];
-      let suppliersData: any[] = [];
-      let productsCount = 0;
-      let suppliersCount = 0;
-
-      // Fetch products data
-      if (currentDisplayMode === 'products') {
-        if (source) {
-          const { data, error, count } = await supabase
-            .from('Products')
-            .select(`
-              Product_ID,
-              Product_Title,
-              Product_Price,
-              Product_Image_URL,
-              Product_URL,
-              Product_MOQ,
-              Product_Country_Name,
-              Product_Category_Name,
-              Product_Supplier_Name,
-              Product_Source_Name
-            `, { count: 'exact' })
-            .eq('Product_Source_ID', source)
-            .order('Product_ID')
-            .limit(ITEMS_PER_PAGE);
-
-          if (error) throw error;
-          productsData = data || [];
-          productsCount = count || 0;
-        } else if (categoryId) {
-          const { data, error, count } = await supabase
-            .from('Products')
-            .select(`
-              Product_ID,
-              Product_Title,
-              Product_Price,
-              Product_Image_URL,
-              Product_URL,
-              Product_MOQ,
-              Product_Country_Name,
-              Product_Category_Name,
-              Product_Supplier_Name,
-              Product_Source_Name
-            `, { count: 'exact' })
-            .eq('Product_Category_ID', categoryId)
-            .order('Product_ID')
-            .limit(ITEMS_PER_PAGE);
-
-          if (error) throw error;
-          productsData = data || [];
-          productsCount = count || 0;
-        } else if (country) {
-          const { data, error, count } = await supabase
-            .from('Products')
-            .select(`
-              Product_ID,
-              Product_Title,
-              Product_Price,
-              Product_Image_URL,
-              Product_URL,
-              Product_MOQ,
-              Product_Country_Name,
-              Product_Category_Name,
-              Product_Supplier_Name,
-              Product_Source_Name
-            `, { count: 'exact' })
-            .eq('Product_Country_ID', country)
-            .order('Product_ID')
-            .limit(ITEMS_PER_PAGE);
-
-          if (error) throw error;
-          productsData = data || [];
-          productsCount = count || 0;
-        } else if (query) {
-          const searchResults = await productsIndex.search(query, {
-            limit: ITEMS_PER_PAGE,
-            facets: ['supplier', 'source', 'country']
-          });
-
-          productsData = searchResults.hits;
-          productsCount = searchResults.estimatedTotalHits || 0;
-        }
+      const { data, error: sourcesError } = await supabase
+        .from('Sources')
+        .select('Source_ID, Source_Title');
+      if (sourcesError) {
+        console.error('Error fetching all sources:', sourcesError);
+        return {};
       }
-      
-      // Fetch suppliers data
-      if (currentDisplayMode === 'suppliers') {
-        if (query) {
-          const searchResults = await suppliersIndex.search(query, {
-            limit: ITEMS_PER_PAGE,
-            facets: ['Supplier_Country_Name', 'Supplier_Source_ID']
-          });
-
-          suppliersData = searchResults.hits;
-          suppliersCount = searchResults.estimatedTotalHits || 0;
-        } else if (country) {
-          const { data, error, count } = await supabase
-            .from('Supplier')
-            .select(`
-              Supplier_ID,
-              Supplier_Title,
-              Supplier_Description,
-              Supplier_Location,
-              Supplier_Country_Name,
-              Supplier_City_Name,
-              Supplier_Source_ID
-            `, { count: 'exact' })
-            .eq('Supplier_Country_ID', country)
-            .order('Supplier_Title')
-            .limit(ITEMS_PER_PAGE);
-
-          if (error) throw error;
-          suppliersData = data || [];
-          suppliersCount = count || 0;
-        } else if (source) {
-          const { data, error, count } = await supabase
-            .from('Supplier')
-            .select(`
-              Supplier_ID,
-              Supplier_Title,
-              Supplier_Description,
-              Supplier_Location,
-              Supplier_Country_Name,
-              Supplier_City_Name,
-              Supplier_Source_ID
-            `, { count: 'exact' })
-            .eq('Supplier_Source_ID', source)
-            .order('Supplier_Title')
-            .limit(ITEMS_PER_PAGE);
-
-          if (error) throw error;
-          suppliersData = data || [];
-          suppliersCount = count || 0;
-        }
-      }
-      
-      return {
-        productsData,
-        suppliersData,
-        productsCount,
-        suppliersCount
-      };
+      return (data || []).reduce((acc, source) => {
+        acc[source.Source_ID] = source.Source_Title;
+        return acc;
+      }, {} as Record<string, string>);
     },
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: Infinity,
   });
 
-  // Generate product-centric search suggestions
-  const generateSuggestions = (results: (Product | Supplier)[], searchQuery: string, searchMode: string) => {
-    if (!results.length || !searchQuery.trim()) {
-      setSuggestedSearches([]);
-      return;
+  // Initialize filters from URL params
+  useEffect(() => {
+    const initialFilters: { [key: string]: string[] } = {};
+    
+    if (initialCategory) {
+      initialFilters['category'] = [initialCategory];
+    }
+    if (initialCountry) {
+      if (searchMode === 'products') {
+        initialFilters['country'] = [initialCountry];
+      } else {
+        initialFilters['Supplier_Country_Name'] = [initialCountry];
+      }
+    }
+    if (initialSource) {
+      if (searchMode === 'products') {
+        initialFilters['source'] = [initialSource];
+      } else {
+        initialFilters['Supplier_Source_ID'] = [initialSource];
+      }
+    }
+    
+    setActiveFilters(initialFilters);
+  }, [initialCategory, initialCountry, initialSource, searchMode]);
+
+  // Perform search when debounced query, mode, filters, or sort order changes
+  useEffect(() => {
+    async function performSearch() {
+      if (!debouncedQuery.trim()) {
+        setResults([]);
+        setFacetDistribution(null);
+        setTotalResults(0);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        let searchResults: SearchResult[] = [];
+        let facets: string[] = [];
+        let meilisearchFilters: string[] = [];
+        let meilisearchSort: string[] = [];
+
+        // Build Meilisearch filters from activeFilters state
+        for (const filterKey in activeFilters) {
+          if (activeFilters[filterKey].length > 0) {
+            const filterValues = activeFilters[filterKey].map(value => `"${value}"`).join(' OR ');
+            meilisearchFilters.push(`${filterKey} IN [${filterValues}]`);
+          }
+        }
+
+        // Build Meilisearch sort
+        if (sortBy !== 'relevance') {
+          if (sortBy === 'price:asc') {
+            meilisearchSort.push('price:asc');
+          } else if (sortBy === 'price:desc') {
+            meilisearchSort.push('price:desc');
+          } else if (sortBy === 'product_count:desc') {
+            meilisearchSort.push('product_count:desc');
+          } else if (sortBy === 'product_count:asc') {
+            meilisearchSort.push('product_count:asc');
+          }
+        }
+
+        if (searchMode === 'products') {
+          facets = ['category', 'country', 'source'];
+          const productsResults = await productsIndex.search(debouncedQuery, {
+            limit: 100,
+            attributesToRetrieve: [
+              'id', 'title', 'price', 'image', 'url', 'moq', 'country', 'category', 'supplier', 'source'
+            ],
+            facets,
+            filter: meilisearchFilters.length > 0 ? meilisearchFilters : undefined,
+            sort: meilisearchSort.length > 0 ? meilisearchSort : undefined,
+          });
+
+          searchResults = productsResults.hits.map(hit => ({
+            id: hit.id as string,
+            name: hit.title as string,
+            type: 'product' as const,
+            image: hit.image as string || '',
+            country: hit.country as string || 'Unknown',
+            category: hit.category as string || 'Unknown',
+            supplier: hit.supplier as string || 'Unknown',
+            marketplace: hit.source as string || 'Unknown',
+            price: hit.price as string,
+            moq: hit.moq as string || 'N/A',
+            url: `/product/${hit.id}`
+          }));
+          setFacetDistribution(productsResults.facetDistribution);
+          setTotalResults(productsResults.estimatedTotalHits || productsResults.hits.length);
+
+        } else { // searchMode === 'suppliers'
+          facets = ['Supplier_Country_Name', 'Supplier_Source_ID'];
+          const suppliersResults = await suppliersIndex.search(debouncedQuery, {
+            limit: 100,
+            attributesToRetrieve: [
+              'Supplier_ID', 'Supplier_Title', 'Supplier_Description', 'Supplier_Country_Name',
+              'Supplier_City_Name', 'Supplier_Location', 'Supplier_Source_ID', 'product_count', 'product_keywords'
+            ],
+            facets,
+            filter: meilisearchFilters.length > 0 ? meilisearchFilters : undefined,
+            sort: meilisearchSort.length > 0 ? meilisearchSort : undefined,
+          });
+
+          searchResults = suppliersResults.hits.map(hit => ({
+            id: hit.Supplier_ID as string,
+            name: hit.Supplier_Title as string,
+            type: 'supplier' as const,
+            country: hit.Supplier_Country_Name as string || 'Unknown',
+            location: hit.Supplier_Location as string || hit.Supplier_City_Name as string || 'Unknown',
+            description: hit.Supplier_Description as string || '',
+            product_count: hit.product_count as number || 0,
+            sourceId: hit.Supplier_Source_ID as string || '',
+            sourceTitle: allSourcesMap?.[hit.Supplier_Source_ID as string] || 'Unknown Source',
+            productKeywords: hit.product_keywords as string || '',
+            url: createSupplierUrl(hit.Supplier_Title as string, hit.Supplier_ID as string)
+          }));
+          setFacetDistribution(suppliersResults.facetDistribution);
+          setTotalResults(suppliersResults.estimatedTotalHits || suppliersResults.hits.length);
+        }
+
+        setResults(searchResults);
+        logSearchQuery(debouncedQuery.trim(), searchMode);
+
+      } catch (err) {
+        console.error('Search error:', err);
+        setError('Failed to perform search. Please try again.');
+        setResults([]);
+        setFacetDistribution(null);
+        setTotalResults(0);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    const suggestions = new Set<string>();
-    const queryLower = searchQuery.toLowerCase();
+    performSearch();
+  }, [debouncedQuery, searchMode, activeFilters, sortBy, allSourcesMap]);
+
+  const handleFilterChange = useCallback((filterKey: string, value: string) => {
+    setActiveFilters(prev => {
+      const currentSelection = prev[filterKey] || [];
+      if (currentSelection.includes(value)) {
+        return { ...prev, [filterKey]: currentSelection.filter(item => item !== value) };
+      } else {
+        return { ...prev, [filterKey]: [...currentSelection, value] };
+      }
+    });
+    
+    analytics.trackEvent('search_filter_applied', {
+      props: {
+        filter_type: filterKey,
+        filter_value: value,
+        search_mode: searchMode
+      }
+    });
+  }, [searchMode]);
+
+  const handleSortChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortBy(e.target.value);
+    analytics.trackEvent('search_sort_changed', {
+      props: {
+        sort_by: e.target.value,
+        search_mode: searchMode
+      }
+    });
+  }, [searchMode]);
+
+  const handleSearchModeChange = useCallback((mode: 'products' | 'suppliers') => {
+    setSearchMode(mode);
+    setActiveFilters({});
+    setSortBy('relevance');
+    analytics.trackEvent('search_mode_changed', {
+      props: { mode }
+    });
+  }, []);
+
+  const filterGroups: FilterGroup[] = useMemo(() => {
+    if (!facetDistribution) return [];
+
+    const groups: FilterGroup[] = [];
 
     if (searchMode === 'products') {
-      // Enhanced product-centric suggestions
-      const materialTerms = new Set<string>();
-      const applicationTerms = new Set<string>();
-      const categoryTerms = new Set<string>();
-
-      // Define material keywords to look for - EXPANDED LIST
-      const materialKeywords = [
-        // Metals
-        'aluminum', 'steel', 'iron', 'copper', 'brass', 'bronze', 'titanium', 'zinc',
-        'stainless', 'carbon', 'alloy', 'metal', 'metallic', 'chrome', 'silver', 'gold',
-        'nickel', 'tin', 'lead', 'magnesium', 'tungsten',
-        
-        // Plastics and Polymers
-        'plastic', 'polymer', 'pvc', 'polyethylene', 'polypropylene', 'acrylic', 'nylon',
-        'abs', 'polycarbonate', 'vinyl', 'resin', 'fiberglass', 'composite',
-        
-        // Natural Materials
-        'wood', 'bamboo', 'cotton', 'leather', 'wool', 'silk', 'linen', 'jute', 'hemp',
-        'rubber', 'silicone', 'ceramic', 'glass', 'stone', 'marble', 'granite',
-        
-        // Textiles
-        'fabric', 'textile', 'polyester', 'denim', 'canvas', 'felt', 'fleece', 'velvet',
-        'satin', 'suede', 'microfiber', 'mesh',
-        
-        // Paper Products
-        'paper', 'cardboard', 'paperboard', 'corrugated',
-        
-        // Construction Materials
-        'concrete', 'cement', 'brick', 'tile', 'grout', 'drywall', 'plywood', 'lumber',
-        'insulation', 'asphalt', 'gypsum'
-      ];
-
-      // Define application/use keywords - EXPANDED LIST
-      const applicationKeywords = [
-        // Industries
-        'industrial', 'automotive', 'construction', 'medical', 'electronic', 'electrical',
-        'agricultural', 'aerospace', 'marine', 'military', 'commercial', 'residential',
-        'manufacturing', 'mining', 'oil', 'gas', 'chemical', 'pharmaceutical',
-        
-        // Locations
-        'kitchen', 'bathroom', 'bedroom', 'living', 'office', 'garage', 'garden', 'outdoor',
-        'indoor', 'home', 'school', 'hospital', 'restaurant', 'hotel', 'retail',
-        
-        // Functions
-        'packaging', 'storage', 'transport', 'safety', 'security', 'cleaning', 'heating',
-        'cooling', 'lighting', 'plumbing', 'ventilation', 'insulation', 'decoration',
-        'protection', 'measurement', 'monitoring', 'control', 'automation', 'communication',
-        
-        // Product Types
-        'tool', 'machine', 'equipment', 'device', 'system', 'component', 'accessory',
-        'furniture', 'appliance', 'instrument', 'container', 'vehicle', 'clothing',
-        'footwear', 'hardware', 'software', 'supply', 'part', 'assembly'
-      ];
-
-      // Product attributes
-      const attributeKeywords = [
-        'portable', 'handheld', 'wireless', 'rechargeable', 'disposable', 'reusable',
-        'adjustable', 'foldable', 'collapsible', 'expandable', 'modular', 'customizable',
-        'waterproof', 'weatherproof', 'fireproof', 'shockproof', 'dustproof', 'rustproof',
-        'lightweight', 'heavy-duty', 'high-capacity', 'high-performance', 'energy-efficient',
-        'eco-friendly', 'biodegradable', 'organic', 'natural', 'synthetic', 'handmade',
-        'digital', 'smart', 'automatic', 'manual', 'mechanical', 'hydraulic', 'pneumatic',
-        'electric', 'solar', 'battery-powered', 'cordless', 'corded'
-      ];
-
-      (results as Product[]).forEach(product => {
-        const productName = product.name.toLowerCase();
-        const category = product.category.toLowerCase();
-
-        // Extract material terms
-        materialKeywords.forEach(material => {
-          if (productName.includes(material) && !queryLower.includes(material)) {
-            materialTerms.add(material);
-          }
+      // Categories
+      if (facetDistribution['category']) {
+        groups.push({
+          title: 'Category Type',
+          key: 'category',
+          options: Object.entries(facetDistribution['category']).map(([name, count]) => ({
+            id: name,
+            name: name,
+            count: count as number,
+          })).sort((a, b) => b.count - a.count),
+          selected: activeFilters['category'] || [],
         });
-
-        // Extract application terms
-        applicationKeywords.forEach(application => {
-          if (productName.includes(application) && !queryLower.includes(application)) {
-            applicationTerms.add(application);
-          }
+      }
+      // Supplier Country
+      if (facetDistribution['country']) {
+        groups.push({
+          title: 'Supplier Country',
+          key: 'country',
+          options: Object.entries(facetDistribution['country']).map(([name, count]) => ({
+            id: name,
+            name: name,
+            count: count as number,
+          })).sort((a, b) => b.count - a.count),
+          selected: activeFilters['country'] || [],
         });
-
-        // Add relevant categories (but filter out generic ones)
-        if (category !== 'unknown' && 
-            !category.includes(queryLower) && 
-            !queryLower.includes(category) &&
-            category.length > 3) {
-          categoryTerms.add(product.category);
-        }
-
-        // Extract specific product terms from names
-        const words = productName.split(/[\s\-_,\.()]+/)
-          .filter(word => 
-            word.length > 3 && 
-            word.length < 15 && // Avoid very long words
-            !word.includes(queryLower) && 
-            !queryLower.includes(word) &&
-            // Enhanced stop words for better filtering
-            !['with', 'from', 'made', 'high', 'quality', 'premium', 'best', 'new', 'old', 
-              'large', 'small', 'mini', 'micro', 'super', 'ultra', 'professional',
-              'standard', 'heavy', 'light', 'strong', 'durable', 'portable',
-              'electric', 'manual', 'automatic', 'digital', 'analog', 'this', 'that',
-              'these', 'those', 'they', 'them', 'their', 'there', 'here', 'where',
-              'when', 'what', 'which', 'who', 'whom', 'whose', 'why', 'how', 'have',
-              'has', 'had', 'does', 'did', 'doing', 'done', 'been', 'being', 'would',
-              'could', 'should', 'will', 'shall', 'may', 'might', 'must', 'can'].includes(word) &&
-            // Avoid numbers and codes
-            !/^\d+$/.test(word) &&
-            !/^[a-z]\d+/.test(word)
-          );
-        
-        words.forEach(word => {
-          // Check if this word appears in multiple products (relevance filter)
-          const wordCount = (results as Product[]).filter(p => 
-            p.name.toLowerCase().includes(word)
-          ).length;
-          
-          if (wordCount >= 2) {
-            materialTerms.add(word);
-          }
+      }
+      // Sources
+      if (facetDistribution['source']) {
+        groups.push({
+          title: 'Sources',
+          key: 'source',
+          options: Object.entries(facetDistribution['source']).map(([name, count]) => ({
+            id: name,
+            name: name,
+            count: count as number,
+          })).sort((a, b) => b.count - a.count),
+          selected: activeFilters['source'] || [],
         });
-      });
-
-      // Prioritize suggestions by relevance
-      // 1. Material terms (most specific)
-      const sortedMaterials = Array.from(materialTerms)
-        .sort((a, b) => {
-          const countA = (results as Product[]).filter(p => p.name.toLowerCase().includes(a)).length;
-          const countB = (results as Product[]).filter(p => p.name.toLowerCase().includes(b)).length;
-          return countB - countA;
+      }
+    } else { // searchMode === 'suppliers'
+      // Supplier Country
+      if (facetDistribution['Supplier_Country_Name']) {
+        groups.push({
+          title: 'Supplier Country',
+          key: 'Supplier_Country_Name',
+          options: Object.entries(facetDistribution['Supplier_Country_Name']).map(([name, count]) => ({
+            id: name,
+            name: name,
+            count: count as number,
+          })).sort((a, b) => b.count - a.count),
+          selected: activeFilters['Supplier_Country_Name'] || [],
         });
-
-      // 2. Application terms
-      const sortedApplications = Array.from(applicationTerms)
-        .sort((a, b) => {
-          const countA = (results as Product[]).filter(p => p.name.toLowerCase().includes(a)).length;
-          const countB = (results as Product[]).filter(p => p.name.toLowerCase().includes(b)).length;
-          return countB - countA;
+      }
+      // Sources (using Product_Source_Name for consistency)
+      if (facetDistribution['Supplier_Source_ID'] && allSourcesMap) {
+        groups.push({
+          title: 'Sources',
+          key: 'Supplier_Source_ID',
+          options: Object.entries(facetDistribution['Supplier_Source_ID']).map(([id, count]) => ({
+            id: id,
+            name: allSourcesMap[id] || id,
+            count: count as number,
+          })).sort((a, b) => b.count - a.count),
+          selected: activeFilters['Supplier_Source_ID'] || [],
         });
-
-      // 3. Category terms (least priority)
-      const sortedCategories = Array.from(categoryTerms)
-        .sort((a, b) => {
-          const countA = (results as Product[]).filter(p => p.category === a).length;
-          const countB = (results as Product[]).filter(p => p.category === b).length;
-          return countB - countA;
-        });
-
-      // Add suggestions in order of priority
-      [...sortedMaterials.slice(0, 2), ...sortedApplications.slice(0, 1), ...sortedCategories.slice(0, 1)]
-        .slice(0, 3)
-        .forEach(term => {
-          const displayTerm = term.charAt(0).toUpperCase() + term.slice(1);
-          suggestions.add(displayTerm);
-        });
-
-    } else {
-      // For suppliers, focus on industry and capability terms
-      const industryTerms = new Set<string>();
-      const capabilityTerms = new Set<string>();
-      const locationTerms = new Set<string>();
-
-      // Enhanced industry keywords
-      const industryKeywords = [
-        'manufacturing', 'production', 'export', 'import', 'wholesale', 'retail',
-        'distribution', 'logistics', 'supply', 'trading', 'sourcing', 'procurement',
-        'fabrication', 'assembly', 'processing', 'packaging', 'shipping', 'consulting',
-        'engineering', 'design', 'development', 'research', 'testing', 'certification',
-        'quality', 'inspection', 'maintenance', 'repair', 'installation', 'service',
-        'textile', 'apparel', 'furniture', 'electronics', 'automotive', 'construction',
-        'agricultural', 'chemical', 'pharmaceutical', 'medical', 'food', 'beverage',
-        'cosmetic', 'plastic', 'metal', 'wood', 'paper', 'glass', 'ceramic', 'rubber'
-      ];
-
-      // Location keywords
-      const locationKeywords = [
-        'mexico', 'colombia', 'brazil', 'argentina', 'chile', 'peru', 'ecuador',
-        'venezuela', 'bolivia', 'paraguay', 'uruguay', 'panama', 'costa rica',
-        'guatemala', 'honduras', 'el salvador', 'nicaragua', 'belize', 'dominican',
-        'puerto rico', 'cuba', 'jamaica', 'haiti', 'bahamas', 'guyana', 'suriname',
-        'french guiana', 'guadalajara', 'monterrey', 'tijuana', 'cancun', 'merida',
-        'puebla', 'queretaro', 'leon', 'mexico city', 'bogota', 'medellin', 'cali',
-        'barranquilla', 'cartagena', 'sao paulo', 'rio de janeiro', 'brasilia',
-        'salvador', 'fortaleza', 'belo horizonte', 'manaus', 'curitiba'
-      ];
-
-      (results as Supplier[]).forEach(supplier => {
-        // Extract industry terms from supplier descriptions and keywords
-        if (supplier.product_keywords) {
-          const keywords = supplier.product_keywords.toLowerCase().split(/[\s,]+/)
-            .filter(word => 
-              word.length > 3 && 
-              !word.includes(queryLower) && 
-              !queryLower.includes(word) &&
-              !['with', 'from', 'made', 'high', 'quality', 'and', 'the', 'for', 'our', 'we', 'are'].includes(word)
-            );
-          
-          keywords.forEach(keyword => {
-            // Check if keyword is an industry term
-            if (industryKeywords.includes(keyword)) {
-              industryTerms.add(keyword);
-            } else {
-              // Otherwise add to general capability terms
-              capabilityTerms.add(keyword);
-            }
-          });
-        }
-
-        // Extract location terms
-        if (supplier.Supplier_Country_Name) {
-          const location = supplier.Supplier_Country_Name.toLowerCase();
-          locationKeywords.forEach(loc => {
-            if (location.includes(loc) && !queryLower.includes(loc)) {
-              locationTerms.add(loc);
-            }
-          });
-        }
-
-        if (supplier.Supplier_City_Name) {
-          const city = supplier.Supplier_City_Name.toLowerCase();
-          locationKeywords.forEach(loc => {
-            if (city.includes(loc) && !queryLower.includes(loc)) {
-              locationTerms.add(loc);
-            }
-          });
-        }
-
-        // Extract capability terms from supplier names and descriptions
-        if (supplier.Supplier_Description) {
-          const description = supplier.Supplier_Description.toLowerCase();
-          
-          // Check for industry keywords in description
-          industryKeywords.forEach(industry => {
-            if (description.includes(industry) && !queryLower.includes(industry)) {
-              industryTerms.add(industry);
-            }
-          });
-          
-          // Extract other meaningful words
-          const words = description.split(/[\s\-_,\.]+/)
-            .filter(word => 
-              word.length > 4 && 
-              !word.includes(queryLower) && 
-              !queryLower.includes(word) &&
-              !['with', 'from', 'made', 'high', 'quality', 'and', 'the', 'for', 'our', 'we', 'are',
-                'that', 'this', 'these', 'those', 'they', 'them', 'their', 'there', 'here', 'where',
-                'when', 'what', 'which', 'who', 'whom', 'whose', 'why', 'how', 'have', 'has', 'had'].includes(word)
-            );
-          
-          words.forEach(word => {
-            // Check if this word appears in multiple suppliers (relevance filter)
-            const wordCount = (results as Supplier[]).filter(s => 
-              s.Supplier_Description?.toLowerCase().includes(word)
-            ).length;
-            
-            if (wordCount >= 2) {
-              capabilityTerms.add(word);
-            }
-          });
-        }
-      });
-
-      // Add relevant industry terms
-      const relevantIndustryTerms = Array.from(industryTerms)
-        .filter(term => {
-          const termCount = (results as Supplier[]).filter(s => 
-            s.product_keywords?.toLowerCase().includes(term) || 
-            s.Supplier_Description?.toLowerCase().includes(term)
-          ).length;
-          return termCount >= 2;
-        })
-        .sort((a, b) => {
-          const countA = (results as Supplier[]).filter(s => 
-            s.product_keywords?.toLowerCase().includes(a) || 
-            s.Supplier_Description?.toLowerCase().includes(a)
-          ).length;
-          const countB = (results as Supplier[]).filter(s => 
-            s.product_keywords?.toLowerCase().includes(b) || 
-            s.Supplier_Description?.toLowerCase().includes(b)
-          ).length;
-          return countB - countA;
-        });
-
-      // Add relevant location terms
-      const relevantLocationTerms = Array.from(locationTerms)
-        .sort((a, b) => {
-          const countA = (results as Supplier[]).filter(s => 
-            s.Supplier_Country_Name?.toLowerCase().includes(a) || 
-            s.Supplier_City_Name?.toLowerCase().includes(a) ||
-            s.Supplier_Location?.toLowerCase().includes(a)
-          ).length;
-          const countB = (results as Supplier[]).filter(s => 
-            s.Supplier_Country_Name?.toLowerCase().includes(b) || 
-            s.Supplier_City_Name?.toLowerCase().includes(b) ||
-            s.Supplier_Location?.toLowerCase().includes(b)
-          ).length;
-          return countB - countA;
-        });
-
-      // Add relevant capability terms
-      const relevantCapabilityTerms = Array.from(capabilityTerms)
-        .sort((a, b) => {
-          const countA = (results as Supplier[]).filter(s => 
-            s.Supplier_Description?.toLowerCase().includes(a) || 
-            s.product_keywords?.toLowerCase().includes(a)
-          ).length;
-          const countB = (results as Supplier[]).filter(s => 
-            s.Supplier_Description?.toLowerCase().includes(b) || 
-            s.product_keywords?.toLowerCase().includes(b)
-          ).length;
-          return countB - countA;
-        });
-
-      // Combine the most relevant terms from each category
-      [...relevantIndustryTerms.slice(0, 1), ...relevantLocationTerms.slice(0, 1), ...relevantCapabilityTerms.slice(0, 1)]
-        .slice(0, 3)
-        .forEach(term => {
-          const displayTerm = term.charAt(0).toUpperCase() + term.slice(1);
-          suggestions.add(displayTerm);
-        });
+      }
     }
 
-    setSuggestedSearches(Array.from(suggestions).slice(0, 3));
-  };
+    return groups;
+  }, [facetDistribution, searchMode, activeFilters, allSourcesMap]);
 
-  const handleSuggestionClick = (suggestion: string) => {
-    // Log the suggested search query
-    logSearchQuery(suggestion, currentDisplayMode);
-    
-    // Navigate to a new search with the suggested term
-    const searchParams = new URLSearchParams({
-      q: suggestion,
-      mode: currentDisplayMode
+  const sortOptions = useMemo(() => {
+    if (searchMode === 'products') {
+      return [
+        { value: 'relevance', label: 'Relevance' },
+        { value: 'price:asc', label: 'Price: Low to High' },
+        { value: 'price:desc', label: 'Price: High to Low' },
+      ];
+    } else { // searchMode === 'suppliers'
+      return [
+        { value: 'relevance', label: 'Relevance' },
+        { value: 'product_count:desc', label: 'Product Count: High to Low' },
+        { value: 'product_count:asc', label: 'Product Count: Low to High' },
+      ];
+    }
+  }, [searchMode]);
+
+  const clearAllFilters = useCallback(() => {
+    setActiveFilters({});
+    analytics.trackEvent('search_filters_cleared', {
+      props: { search_mode: searchMode }
     });
-    navigate(`/search?${searchParams.toString()}`);
-  };
+  }, [searchMode]);
 
-  const handleDisplayModeToggle = (mode: 'products' | 'suppliers') => {
-    setCurrentDisplayMode(mode);
-    
-    // Update URL search params
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('mode', mode);
-    setSearchParams(newParams, { replace: true });
-    
-    // Reset pagination
-    setCurrentPage(0);
-    
-    // Update displayed results based on the new mode
-    updateDisplayedResults(mode);
-    
-    // Track the mode change
-    analytics.trackEvent('search_mode_toggle', {
-      props: { 
-        mode,
-        from: currentDisplayMode,
-        query: query || '',
-        category: categoryId || '',
-        source: source || '',
-        country: country || ''
-      }
-    });
-  };
-
-  useEffect(() => {
-    async function fetchNames() {
-      if (categoryId) {
-        const { data, error } = await supabase
-          .from('Categories')
-          .select('Category_Name')
-          .eq('Category_ID', categoryId)
-          .single();
-
-        if (error) {
-          console.error('Error fetching category:', error);
-          return;
-        }
-
-        if (data) {
-          setCategoryName(data.Category_Name);
-        }
-      }
-
-      if (source) {
-        const { data, error } = await supabase
-          .from('Sources')
-          .select('Source_Title')
-          .eq('Source_ID', source)
-          .single();
-
-        if (error) {
-          console.error('Error fetching source:', error);
-          return;
-        }
-
-        if (data) {
-          setSourceName(data.Source_Title);
-        }
-      }
-
-      if (country) {
-        const { data, error } = await supabase
-          .from('Countries')
-          .select('Country_Title')
-          .eq('Country_ID', country)
-          .single();
-
-        if (error) {
-          console.error('Error fetching country:', error);
-          return;
-        }
-
-        if (data) {
-          setCountryName(data.Country_Title);
-        }
-      }
-    }
-
-    fetchNames();
-  }, [categoryId, source, country]);
-
-  // Function to load all results
-  const loadAllResults = async () => {
-    setLoading(true);
-    setResults([]);
-    setAllProducts([]);
-    setAllSuppliers([]);
-    setCurrentPage(0);
-    setHasMore(true);
-
-    try {
-      console.log(`Loading all results for search... (mode: ${currentDisplayMode})`);
-      
-      // Always fetch both products and suppliers data
-      let productsData: any[] = [];
-      let suppliersData: any[] = [];
-      let productsCount = 0;
-      let suppliersCount = 0;
-
-      // Fetch products data
-      if (source) {
-        console.log('Loading products for source:', source);
-        
-        const { data, error, count } = await supabase
-          .from('Products')
-          .select(`
-            Product_ID,
-            Product_Title,
-            Product_Price,
-            Product_Image_URL,
-            Product_URL,
-            Product_MOQ,
-            Product_Country_Name,
-            Product_Category_Name,
-            Product_Supplier_Name,
-            Product_Source_Name
-          `, { count: 'exact' })
-          .eq('Product_Source_ID', source)
-          .order('Product_ID');
-
-        if (error) throw error;
-        productsData = data || [];
-        productsCount = count || 0;
-      } else if (categoryId) {
-        console.log('Loading products for category:', categoryId);
-        
-        const { data, error, count } = await supabase
-          .from('Products')
-          .select(`
-            Product_ID,
-            Product_Title,
-            Product_Price,
-            Product_Image_URL,
-            Product_URL,
-            Product_MOQ,
-            Product_Country_Name,
-            Product_Category_Name,
-            Product_Supplier_Name,
-            Product_Source_Name
-          `, { count: 'exact' })
-          .eq('Product_Category_ID', categoryId)
-          .order('Product_ID');
-
-        if (error) throw error;
-        productsData = data || [];
-        productsCount = count || 0;
-      } else if (country) {
-        console.log('Loading products for country:', country);
-        
-        const { data, error, count } = await supabase
-          .from('Products')
-          .select(`
-            Product_ID,
-            Product_Title,
-            Product_Price,
-            Product_Image_URL,
-            Product_URL,
-            Product_MOQ,
-            Product_Country_Name,
-            Product_Category_Name,
-            Product_Supplier_Name,
-            Product_Source_Name
-          `, { count: 'exact' })
-          .eq('Product_Country_ID', country)
-          .order('Product_ID');
-
-        if (error) throw error;
-        productsData = data || [];
-        productsCount = count || 0;
-      } else if (query) {
-        // For text searches, use Meilisearch to get all results
-        console.log('Loading products for text search:', query);
-        
-        const searchResults = await productsIndex.search(query, {
-          limit: 10000, // Get all results
-          facets: ['supplier', 'source', 'country']
-        });
-
-        productsData = searchResults.hits;
-        productsCount = searchResults.estimatedTotalHits || 0;
-      }
-
-      // Fetch suppliers data
-      if (query) {
-        console.log('Loading suppliers for text search:', query);
-        
-        const searchResults = await suppliersIndex.search(query, {
-          limit: 10000, // Get all results
-          facets: ['Supplier_Country_Name', 'Supplier_Source_ID']
-        });
-
-        suppliersData = searchResults.hits;
-        suppliersCount = searchResults.estimatedTotalHits || 0;
-      } else if (country) {
-        console.log('Loading suppliers for country:', country);
-        
-        const { data, error, count } = await supabase
-          .from('Supplier')
-          .select(`
-            Supplier_ID,
-            Supplier_Title,
-            Supplier_Description,
-            Supplier_Location,
-            Supplier_Country_Name,
-            Supplier_City_Name,
-            Supplier_Source_ID
-          `, { count: 'exact' })
-          .eq('Supplier_Country_ID', country)
-          .order('Supplier_Title');
-
-        if (error) throw error;
-        suppliersData = data || [];
-        suppliersCount = count || 0;
-      } else if (source) {
-        console.log('Loading suppliers for source:', source);
-        
-        const { data, error, count } = await supabase
-          .from('Supplier')
-          .select(`
-            Supplier_ID,
-            Supplier_Title,
-            Supplier_Description,
-            Supplier_Location,
-            Supplier_Country_Name,
-            Supplier_City_Name,
-            Supplier_Source_ID
-          `, { count: 'exact' })
-          .eq('Supplier_Source_ID', source)
-          .order('Supplier_Title');
-
-        if (error) throw error;
-        suppliersData = data || [];
-        suppliersCount = count || 0;
-      }
-
-      // Extract unique source IDs for batch fetching
-      const sourceIds = [...new Set(
-        suppliersData
-          .map(supplier => supplier.Supplier_Source_ID)
-          .filter(Boolean)
-      )];
-
-      // Fetch source titles from Supabase
-      let sourceTitles: Record<string, string> = {};
-      if (sourceIds.length > 0) {
-        try {
-          const { data: sourcesData, error: sourcesError } = await supabase
-            .from('Sources')
-            .select('Source_ID, Source_Title')
-            .in('Source_ID', sourceIds);
-
-          if (sourcesError) {
-            console.error('Error fetching sources:', sourcesError);
-          } else if (sourcesData) {
-            sourceTitles = sourcesData.reduce((acc, source) => {
-              acc[source.Source_ID] = source.Source_Title;
-              return acc;
-            }, {} as Record<string, string>);
-          }
-        } catch (err) {
-          console.error('Error in source fetch:', err);
-        }
-      }
-
-      // Format product results
-      const formattedProducts = productsData.map(product => ({
-        id: product.Product_ID || product.id,
-        name: product.Product_Title || product.title,
-        Product_Price: product.Product_Price || product.price || '$0',
-        image: product.Product_Image_URL || product.image || '',
-        country: product.Product_Country_Name || product.country || 'Unknown',
-        category: product.Product_Category_Name || product.category || 'Unknown',
-        supplier: product.Product_Supplier_Name || product.supplier || 'Unknown',
-        Product_MOQ: product.Product_MOQ || product.moq || '0',
-        sourceUrl: product.Product_URL || product.url || '',
-        marketplace: product.Product_Source_Name || product.source || 'Unknown'
-      }));
-
-      // Format supplier results
-      const formattedSuppliers = suppliersData.map(supplier => ({
-        Supplier_ID: supplier.Supplier_ID,
-        Supplier_Title: supplier.Supplier_Title,
-        Supplier_Description: supplier.Supplier_Description || '',
-        Supplier_Country_Name: supplier.Supplier_Country_Name || 'Unknown',
-        Supplier_City_Name: supplier.Supplier_City_Name || '',
-        Supplier_Location: supplier.Supplier_Location || '',
-        product_count: supplier.product_count || 0,
-        product_keywords: supplier.product_keywords || '',
-        sourceTitle: sourceTitles[supplier.Supplier_Source_ID] || 'Unknown Source'
-      }));
-
-      // Store all fetched data
-      setAllProducts(formattedProducts);
-      setAllSuppliers(formattedSuppliers);
-      
-      // Set total count based on current display mode
-      setTotalCount(currentDisplayMode === 'products' ? productsCount : suppliersCount);
-      
-      // Generate suggestions based on the current display mode
-      if (currentDisplayMode === 'products') {
-        generateSuggestions(formattedProducts, query, 'products');
-      } else {
-        generateSuggestions(formattedSuppliers, query, 'suppliers');
-      }
-      
-      // Update displayed results based on current display mode
-      updateDisplayedResults(currentDisplayMode);
-      
-      // Log the search query
-      if (query) {
-        logSearchQuery(query, currentDisplayMode);
-      }
-    } catch (err) {
-      console.error('Search error:', err);
-      logError(err instanceof Error ? err : new Error('Search failed'), {
-        type: 'search_error',
-        query,
-        category: categoryId,
-        source,
-        country,
-        mode: currentDisplayMode
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    loadAllResults();
-  }, [query, categoryId, source, country]);
-
-  // Update filter options based on all results
-  useEffect(() => {
-    if (currentDisplayMode === 'suppliers') {
-      const countryCounts = new Map();
-      const sourceCounts = new Map();
-
-      allSuppliers.forEach(supplier => {
-        if (supplier.Supplier_Country_Name) {
-          countryCounts.set(supplier.Supplier_Country_Name, (countryCounts.get(supplier.Supplier_Country_Name) || 0) + 1);
-        }
-        if (supplier.sourceTitle) {
-          sourceCounts.set(supplier.sourceTitle, (sourceCounts.get(supplier.sourceTitle) || 0) + 1);
-        }
-      });
-
-      setFilters(prev => ({
-        ...prev,
-        categories: { ...prev.categories, options: [] },
-        suppliers: { ...prev.suppliers, options: [] },
-        countries: {
-          ...prev.countries,
-          options: Array.from(countryCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        },
-        sources: {
-          ...prev.sources,
-          options: Array.from(sourceCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        }
-      }));
-    } else {
-      const categoryCounts = new Map();
-      const supplierCounts = new Map();
-      const sourceCounts = new Map();
-      const countryCounts = new Map();
-
-      allProducts.forEach(product => {
-        categoryCounts.set(product.category, (categoryCounts.get(product.category) || 0) + 1);
-        supplierCounts.set(product.supplier, (supplierCounts.get(product.supplier) || 0) + 1);
-        sourceCounts.set(product.marketplace, (sourceCounts.get(product.marketplace) || 0) + 1);
-        countryCounts.set(product.country, (countryCounts.get(product.country) || 0) + 1);
-      });
-
-      setFilters(prev => ({
-        categories: {
-          ...prev.categories,
-          options: Array.from(categoryCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        },
-        suppliers: {
-          ...prev.suppliers,
-          options: Array.from(supplierCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        },
-        sources: {
-          ...prev.sources,
-          options: Array.from(sourceCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        },
-        countries: {
-          ...prev.countries,
-          options: Array.from(countryCounts.entries()).map(([title, count]) => ({
-            id: title,
-            title,
-            count: count as number
-          }))
-        }
-      }));
-    }
-  }, [allProducts, allSuppliers, currentDisplayMode]);
-
-  // Infinite scroll handler
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + document.documentElement.scrollTop
-        >= document.documentElement.offsetHeight - 1000 &&
-        hasMore &&
-        !loadingMore &&
-        !loading
-      ) {
-        loadMoreResults();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, loading, currentPage]);
-
-  const loadMoreResults = () => {
-    if (!hasMore || loadingMore) return;
-
-    setLoadingMore(true);
-    const nextPage = currentPage + 1;
-    const startIndex = nextPage * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    
-    // Apply filters and sorting to get the filtered results
-    const filteredResults = getFilteredAndSortedResults(currentDisplayMode);
-    const newResults = filteredResults.slice(startIndex, endIndex);
-    
-    setResults(prev => [...prev, ...newResults]);
-    setCurrentPage(nextPage);
-    setHasMore(endIndex < filteredResults.length);
-    setLoadingMore(false);
-  };
-
-  const handleFilterChange = (group: keyof typeof filters, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [group]: {
-        ...prev[group],
-        selected: prev[group].selected.includes(value)
-          ? prev[group].selected.filter(v => v !== value)
-          : [...prev[group].selected, value]
-      }
-    }));
-    
-    // Reset pagination when filters change
-    setCurrentPage(0);
-    updateDisplayedResults(currentDisplayMode);
-  };
-
-  const getFilteredAndSortedResults = (displayMode: 'products' | 'suppliers') => {
-    if (displayMode === 'suppliers') {
-      let filtered = allSuppliers.filter(supplier => {
-        const matchesCountry = filters.countries.selected.length === 0 || 
-          filters.countries.selected.includes(supplier.Supplier_Country_Name || 'Unknown');
-        
-        const matchesSource = filters.sources.selected.length === 0 ||
-          filters.sources.selected.includes(supplier.sourceTitle || 'Unknown Source');
-        
-        return matchesCountry && matchesSource;
-      });
-
-      // Apply sorting for suppliers
-      if (sortBy) {
-        filtered = [...filtered].sort((a, b) => {
-          let compareA, compareB;
-
-          switch (sortBy) {
-            case 'country':
-              compareA = (a.Supplier_Country_Name || 'Unknown').toLowerCase();
-              compareB = (b.Supplier_Country_Name || 'Unknown').toLowerCase();
-              break;
-            case 'marketplace':
-              compareA = (a.sourceTitle || 'Unknown').toLowerCase();
-              compareB = (b.sourceTitle || 'Unknown').toLowerCase();
-              break;
-            case 'products':
-              compareA = a.product_count || 0;
-              compareB = b.product_count || 0;
-              break;
-            default:
-              compareA = a.Supplier_Title.toLowerCase();
-              compareB = b.Supplier_Title.toLowerCase();
-              break;
-          }
-
-          if (sortOrder === 'asc') {
-            return compareA > compareB ? 1 : -1;
-          } else {
-            return compareA < compareB ? 1 : -1;
-          }
-        });
-      }
-
-      return filtered;
-    } else {
-      let filtered = allProducts.filter(product => {
-        const matchesCategory = filters.categories.selected.length === 0 || 
-          filters.categories.selected.includes(product.category);
-        const matchesSupplier = filters.suppliers.selected.length === 0 || 
-          filters.suppliers.selected.includes(product.supplier);
-        const matchesSource = filters.sources.selected.length === 0 ||
-          filters.sources.selected.includes(product.marketplace);
-        const matchesCountry = filters.countries.selected.length === 0 ||
-          filters.countries.selected.includes(product.country);
-
-        return matchesCategory && matchesSupplier && matchesSource && matchesCountry;
-      });
-
-      // Apply sorting for products
-      if (sortBy) {
-        filtered = [...filtered].sort((a, b) => {
-          let compareA, compareB;
-
-          switch (sortBy) {
-            case 'price':
-              compareA = parseFloat(a.Product_Price.replace(/[^0-9.-]+/g, ''));
-              compareB = parseFloat(b.Product_Price.replace(/[^0-9.-]+/g, ''));
-              break;
-            case 'country':
-              compareA = a.country.toLowerCase();
-              compareB = b.country.toLowerCase();
-              break;
-            case 'category':
-              compareA = a.category.toLowerCase();
-              compareB = b.category.toLowerCase();
-              break;
-            case 'marketplace':
-              compareA = a.marketplace.toLowerCase();
-              compareB = b.marketplace.toLowerCase();
-              break;
-            default:
-              return 0;
-          }
-
-          if (sortOrder === 'asc') {
-            return compareA > compareB ? 1 : -1;
-          } else {
-            return compareA < compareB ? 1 : -1;
-          }
-        });
-      }
-
-      return filtered;
-    }
-  };
-
-  const updateDisplayedResults = (displayMode: 'products' | 'suppliers') => {
-    const filteredResults = getFilteredAndSortedResults(displayMode);
-    setResults(filteredResults.slice(0, ITEMS_PER_PAGE));
-    setHasMore(filteredResults.length > ITEMS_PER_PAGE);
-    setCurrentPage(0);
-    
-    // Update total count based on filtered results
-    setTotalCount(filteredResults.length);
-  };
-
-  // Update displayed results when filters or sorting change
-  useEffect(() => {
-    updateDisplayedResults(currentDisplayMode);
-  }, [filters, sortBy, sortOrder]);
-
-  // Update displayed results when display mode changes
-  useEffect(() => {
-    updateDisplayedResults(currentDisplayMode);
-  }, [currentDisplayMode]);
-
-  const getPageTitle = () => {
-    if (currentDisplayMode === 'suppliers') {
-      if (country && countryName) return `Suppliers from ${countryName}`;
-      if (source && sourceName) return `Suppliers from ${sourceName}`;
-      return query ? `Supplier Results for "${query}"` : 'All Suppliers';
-    } else {
-      if (categoryId && categoryName) return `Products in ${categoryName}`;
-      if (source && sourceName) return `${totalCount.toLocaleString()} Products from ${sourceName}`;
-      if (country && countryName) return `Products from ${countryName}`;
-      return query ? `Search Results for "${query}"` : 'All Products';
-    }
-  };
-
-  const filteredResults = getFilteredAndSortedResults(currentDisplayMode);
+  const hasActiveFilters = Object.values(activeFilters).some(filters => filters.length > 0);
 
   return (
     <>
-      <SEO 
-        title={getPageTitle()}
-        description={`Browse ${filteredResults.length} ${currentDisplayMode === 'suppliers' ? 'suppliers' : 'products'} matching your search. Filter by ${currentDisplayMode === 'suppliers' ? 'country and source' : 'supplier, source, and country'}.`}
-        keywords={`search results, ${query}, ${currentDisplayMode === 'suppliers' ? 'supplier search, filter suppliers' : 'product search, filter products'}`}
+      <SEO
+        title={`Search Results for "${initialQuery}"`}
+        description={`Explore ${searchMode} related to "${initialQuery}" on Paisán. Find Latin American products and suppliers.`}
+        keywords={`${initialQuery}, ${searchMode}, Latin American products, suppliers, marketplace`}
       />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <Breadcrumbs currentPageTitle={getPageTitle()} />
+          <Breadcrumbs currentPageTitle={`Search Results for "${initialQuery}"`} />
 
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4">
-              <p className="text-gray-300">
-                {loading ? 'Loading...' : `${filteredResults.length} of ${totalCount.toLocaleString()} results`}
-                {hasMore && !loading && ` (showing ${results.length})`}
-              </p>
+          {/* Search Mode Toggle */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => handleSearchModeChange('products')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                searchMode === 'products'
+                  ? 'bg-[#F4A024] text-gray-900 border-b-2 border-[#F4A024]'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Products
+            </button>
+            <button
+              onClick={() => handleSearchModeChange('suppliers')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                searchMode === 'suppliers'
+                  ? 'bg-[#F4A024] text-gray-900 border-b-2 border-[#F4A024]'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              Suppliers
+            </button>
+          </div>
 
-              {/* Display Mode Toggle with "View by" text */}
-              <div className="flex justify-between items-center flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-300">View by:</span>
-                  <div className="flex gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Left Column: Filters */}
+            <div className="lg:col-span-1">
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 sticky top-24">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-100">Filters</h2>
+                  {hasActiveFilters && (
                     <button
-                      onClick={() => handleDisplayModeToggle('products')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                        currentDisplayMode === 'products'
-                          ? 'bg-[#F4A024] text-gray-900'
-                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                      }`}
+                      onClick={clearAllFilters}
+                      className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm"
                     >
-                      <Package className="w-4 h-4" />
-                      Products
+                      Clear all
                     </button>
-                    <button
-                      onClick={() => handleDisplayModeToggle('suppliers')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                        currentDisplayMode === 'suppliers'
-                          ? 'bg-[#F4A024] text-gray-900'
-                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                      }`}
-                    >
-                      <Building2 className="w-4 h-4" />
-                      Suppliers
-                    </button>
-                  </div>
+                  )}
                 </div>
-
-                {/* Related Searches Section */}
-                {suggestedSearches.length > 0 && query && (
-                  <div className="bg-gray-800/30 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-300 mb-3">
-                      Searches related to "{query}"
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedSearches.map((suggestion, index) => (
+                
+                {loading && !facetDistribution ? (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner />
+                  </div>
+                ) : filterGroups.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No filters available for this search.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {filterGroups.map(group => (
+                      <div key={group.key} className="border-b border-gray-700/50 pb-4 last:border-b-0">
                         <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-[#F4A024] text-sm rounded-full transition-colors border border-gray-600/50 hover:border-[#F4A024]/50"
+                          onClick={() => setActiveDropdown(activeDropdown === group.key ? null : group.key)}
+                          className="w-full flex items-center justify-between text-gray-300 hover:text-gray-100 py-2 text-base font-medium"
                         >
-                          {suggestion}
+                          <span>{group.title}</span>
+                          <div className="flex items-center gap-2">
+                            {group.selected.length > 0 && (
+                              <span className="bg-[#F4A024] text-gray-900 text-xs px-2 py-1 rounded-full font-medium">
+                                {group.selected.length}
+                              </span>
+                            )}
+                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === group.key ? 'rotate-180' : ''}`} />
+                          </div>
                         </button>
-                      ))}
-                    </div>
+                        {activeDropdown === group.key && (
+                          <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                            {group.options.length > 0 ? (
+                              group.options.map(option => (
+                                <label key={option.id} className="flex items-center justify-between text-gray-300 text-sm cursor-pointer hover:bg-gray-700/30 p-2 rounded">
+                                  <div className="flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={group.selected.includes(option.id)}
+                                      onChange={() => handleFilterChange(group.key, option.id)}
+                                      className="rounded border-gray-600 text-[#F4A024] focus:ring-[#F4A024] w-4 h-4"
+                                    />
+                                    <span className="ml-2 truncate">{option.name}</span>
+                                  </div>
+                                  <span className="text-gray-400 text-xs ml-2">{option.count}</span>
+                                </label>
+                              ))
+                            ) : (
+                              <p className="text-gray-500 text-xs">No options available.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-
-              <StandardFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                sortOrder={sortOrder}
-                setSortOrder={setSortOrder}
-                activeDropdown={activeDropdown}
-                setActiveDropdown={setActiveDropdown}
-                showCategories={currentDisplayMode === 'products'}
-                showSuppliers={currentDisplayMode === 'products'}
-                showSources={true}
-                showCountries={true}
-              />
             </div>
 
-            {loading ? (
-              <div className="text-center py-12">
-                <LoadingSpinner />
+            {/* Right Column: Results and Sorting */}
+            <div className="lg:col-span-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-100">
+                    Showing {totalResults.toLocaleString()}+ {searchMode} from global suppliers for "{initialQuery}"
+                  </h1>
+                  {hasActiveFilters && (
+                    <p className="text-gray-400 text-sm mt-1">
+                      Filtered results • <button onClick={clearAllFilters} className="text-[#F4A024] hover:text-[#F4A024]/80">Clear filters</button>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">Sort by:</span>
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={handleSortChange}
+                      className="appearance-none bg-gray-800/50 text-gray-300 py-2 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A024] cursor-pointer text-sm border border-gray-700"
+                    >
+                      {sortOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
               </div>
-            ) : results.length > 0 ? (
-              <>
-                {currentDisplayMode === 'suppliers' ? (
-                  // Supplier results grid
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {results.map((supplier) => (
-                      <SupplierCard 
-                        key={supplier.Supplier_ID} 
-                        supplier={supplier as Supplier} 
+
+              {loading && results.length === 0 ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-500 font-bold">Error: {error}</p>
+                  <p className="text-gray-300">Please try again later.</p>
+                </div>
+              ) : results.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-300 font-bold">No {searchMode} found for "{initialQuery}"</p>
+                  {hasActiveFilters ? (
+                    <p className="text-gray-400 text-sm mt-2">
+                      Try adjusting your filters or <button onClick={clearAllFilters} className="text-[#F4A024] hover:text-[#F4A024]/80">clear all filters</button>
+                    </p>
+                  ) : (
+                    <p className="text-gray-400 text-sm mt-2">Try different keywords or browse our categories.</p>
+                  )}
+                </div>
+              ) : (
+                <div className={`grid gap-6 ${searchMode === 'products' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                  {results.map(result => (
+                    result.type === 'product' ? (
+                      <ProductCard 
+                        key={result.id} 
+                        product={{
+                          id: result.id,
+                          name: result.name,
+                          Product_Price: result.price || '$0',
+                          image: result.image || '',
+                          country: result.country || 'Unknown',
+                          category: result.category || 'Unknown',
+                          supplier: result.supplier || 'Unknown',
+                          Product_MOQ: result.moq || 'N/A',
+                          sourceUrl: result.url,
+                          marketplace: result.marketplace || 'Unknown'
+                        }} 
                       />
-                    ))}
-                  </div>
-                ) : (
-                  // Product results grid
-                  <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
-                    {results.map((product) => (
-                      <ProductCard key={product.id} product={product as Product} />
-                    ))}
-                  </div>
-                )}
-                
-                {/* Loading more indicator */}
-                {loadingMore && (
-                  <div className="text-center py-8">
-                    <LoadingSpinner />
-                    <p className="text-gray-400 mt-2">Loading more results...</p>
-                  </div>
-                )}
-                
-                {/* End of results indicator */}
-                {!hasMore && results.length > 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-400 text-sm">You've reached the end of the results</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-300 font-bold">
-                  No {currentDisplayMode === 'suppliers' ? 'suppliers' : 'products'} found 
-                  {categoryId ? ' in this category' : 
-                   source ? ' from this source' : 
-                   country ? ' from this country' : 
-                   query ? ` for "${query}"` : ''}
-                </p>
-                <p className="text-gray-400 font-bold mt-2">
-                  Try {categoryId ? 'another category' : 
-                       source ? 'another source' : 
-                       country ? 'another country' : 
-                       'searching with different keywords'} or browse our categories
-                </p>
-                
-                {/* Suggest switching display mode if there are results in the other mode */}
-                {currentDisplayMode === 'products' && allSuppliers.length > 0 && (
-                  <button
-                    onClick={() => handleDisplayModeToggle('suppliers')}
-                    className="mt-4 text-[#F4A024] hover:text-[#F4A024]/80 font-medium"
-                  >
-                    Switch to Suppliers view ({allSuppliers.length} results available)
-                  </button>
-                )}
-                
-                {currentDisplayMode === 'suppliers' && allProducts.length > 0 && (
-                  <button
-                    onClick={() => handleDisplayModeToggle('products')}
-                    className="mt-4 text-[#F4A024] hover:text-[#F4A024]/80 font-medium"
-                  >
-                    Switch to Products view ({allProducts.length} results available)
-                  </button>
-                )}
-              </div>
-            )}
+                    ) : (
+                      <SupplierCard
+                        key={result.id}
+                        supplier={{
+                          Supplier_ID: result.id,
+                          Supplier_Title: result.name,
+                          Supplier_Description: result.description || '',
+                          Supplier_Country_Name: result.country || 'Unknown',
+                          Supplier_City_Name: result.location || '',
+                          Supplier_Location: result.location || '',
+                          Supplier_Source_ID: result.sourceId || '',
+                          product_keywords: result.productKeywords || '',
+                          Supplier_Website: '',
+                          Supplier_Email: '',
+                          Supplier_Whatsapp: '',
+                        }}
+                      />
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
