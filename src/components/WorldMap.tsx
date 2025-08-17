@@ -184,7 +184,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
             >
               <Popup>
                 <div 
-                  className="text-gray-900 min-w-[280px] cursor-pointer bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 hover:bg-gray-700/50 transition-all"
+                  className="min-w-[280px] cursor-pointer bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 hover:bg-gray-700/50 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/search?country=${country.Country_ID}`);
@@ -198,19 +198,28 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                         className="w-12 h-12 object-contain rounded-full"
                       />
                     )}
-                    <h2 className="text-xl font-semibold text-gray-100">
-                      {country.Country_Title}
-                    </h2>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-100">
+                        {country.Country_Title}
+                      </h2>
+                      <p className="text-[#F4A024] font-medium">
+                        {country.product_count} products
+                      </p>
+                    </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm text-gray-400">
-                      {country.product_count} {country.product_count === 1 ? 'product' : 'products'}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {country.supplier_count} {country.supplier_count === 1 ? 'supplier' : 'suppliers'}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {country.sources_count} {country.sources_count === 1 ? 'source' : 'sources'}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Products:</span>
+                      <span className="text-gray-100 font-medium">{country.product_count}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Suppliers:</span>
+                      <span className="text-gray-100 font-medium">{country.supplier_count}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Sources:</span>
+                      <span className="text-gray-100 font-medium">{country.sources_count}</span>
+                    </div>
                     </p>
                   </div>
                 </div>
