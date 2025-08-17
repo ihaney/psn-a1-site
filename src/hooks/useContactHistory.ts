@@ -41,7 +41,7 @@ export function useContactHistory() {
             Product_MOQ,
             Product_Country_Name,
             Categories (Category_Name),
-            Product_Supplier_ID (Supplier_Title),
+            Product_Supplier_Name,
             Sources (Source_Title)
           )
         `)
@@ -61,7 +61,7 @@ export function useContactHistory() {
           image: item.Products.Product_Image_URL || '',
           country: item.Products.Product_Country_Name || 'Unknown',
           category: item.Products.Categories?.Category_Name || 'Unknown',
-          supplier: item.Products.Product_Supplier_ID?.Supplier_Title || 'Unknown',
+          supplier: item.Products.Product_Supplier_Name || 'Unknown',
           Product_MOQ: item.Products.Product_MOQ,
           sourceUrl: item.Products.Product_URL || '',
           marketplace: item.Products.Sources?.Source_Title || 'Unknown'
