@@ -77,6 +77,7 @@
          setResults([]);
 -        setFacetDistribution(null);
 -        setTotalResults(0);
+        setFacetDistribution({});
 +        setFacetDistribution({});
          return;
        }
@@ -93,7 +94,6 @@
 @@ -121,15 +100,7 @@
          // Build Meilisearch sort
          if (sortBy !== 'relevance') {
-           if (sortBy === 'price:asc') {
 -            meilisearchSort.push('price:asc');
 -          } else if (sortBy === 'price:desc') {
 -            meilisearchSort.push('price:desc');
@@ -102,6 +102,7 @@
 -          } else if (sortBy === 'product_count:asc') {
 -            meilisearchSort.push('product_count:asc');
 -          }
+          meilisearchSort.push(sortBy);
 -        }
 +            meilisearchSort.push('price:asc'); // This is already handled by the sortBy state directly
 +          } else if (sortBy === 'price:desc') { // This is already handled by the sortBy state directly
@@ -157,7 +158,6 @@
        // Categories
 -      if (facetDistribution['Product_Category_Name']) {
 -        groups.push({
--          title: 'Category',
 -          key: 'Product_Category_Name',
 -          options: Object.entries(facetDistribution['Product_Category_Name']).map(([name, count]) => ({
 -            id: name,
@@ -167,6 +167,17 @@
 -          selected: activeFilters['Product_Category_Name'] || [],
 -        });
 -      }
+      groups.push({
+        title: 'Category Type',
+        key: 'Product_Category_Name',
+        options: Object.entries(facetDistribution['Product_Category_Name'] || {}).map(([name, count]) => ({
+          id: name,
+          name: name,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['Product_Category_Name'] || [],
+      });
+
 +      groups.push({
 +        title: 'Category Type',
 +        key: 'Product_Category_Name',
@@ -215,6 +226,16 @@
 -          selected: activeFilters['Product_Source_Name'] || [],
 -        });
 -      }
+      groups.push({
+        title: 'Sources',
+        key: 'Supplier_Source_ID',
+        options: Object.entries(facetDistribution['Supplier_Source_ID'] || {}).map(([id, count]) => ({
+          id: id,
+          name: allSourcesMap?.[id] || id,
+          count: count as number,
+        })).sort((a, b) => b.count - a.count),
+        selected: activeFilters['Supplier_Source_ID'] || [],
+      });
 +      groups.push({
 +        title: 'Sources',
 +        key: 'Product_Source_Name',
@@ -336,7 +357,7 @@
                    <p className="text-gray-400 text-sm">No filters available for this search.</p>
                  ) : (
                    <div className="space-y-6">
--                    {filterGroups.map(group => (
+                    {filterGroups.map(group => (
 +                    {filterGroups.map((group) => (
                        <div key={group.key} className="border-b border-gray-700 pb-4 last:border-b-0">
                          <button
@@ -345,15 +366,15 @@
                            <span className="flex items-center gap-2">
                              {group.title}
                              {group.selected.length > 0 && (
--                              <span className="bg-[#F4A024] text-gray-900 text-xs px-2 py-1 rounded-full font-medium">
+                              <span className="bg-[#F4A024] text-gray-900 text-xs px-2 py-1 rounded-full font-medium">
 +                              <span className="bg-[#F4A024] text-gray-900 text-xs px-1.5 py-0.5 rounded-full font-medium">
-                                 {group.selected.length}
+                                No options available for this search.
                                </span>
                              )}
                            </span>
                            <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === group.key ? 'rotate-180' : ''}`} />
                          </button>
--                        {(activeDropdown === group.key || group.selected.length > 0) && (
+                        {(activeDropdown === group.key || group.selected.length > 0) && (
 +                        {(activeDropdown === group.key || group.selected.length > 0 || group.options.length > 0) && (
                            <div className="mt-3 space-y-2 max-h-64 overflow-y-auto">
                              {group.options.length > 0 ? (
@@ -362,7 +383,7 @@
                                        type="checkbox"
                                        checked={group.selected.includes(option.id)}
                                        onChange={() => handleFilterChange(group.key, option.id)}
--                                      className="rounded border-gray-600 text-[#F4A024] focus:ring-[#F4A024] focus:ring-offset-0 w-4 h-4 bg-gray-700"
+                                      className="rounded border-gray-600 text-[#F4A024] focus:ring-[#F4A024] focus:ring-offset-0 w-4 h-4 bg-gray-700"
 +                                      className="rounded border-gray-600 text-[#F4A024] focus:ring-[#F4A024] focus:ring-offset-0 w-4 h-4 bg-gray-700/50"
                                      />
                                      <span className="ml-3 truncate">{option.name}</span>
@@ -389,7 +410,7 @@
                        onChange={handleSortChange}
                        className="appearance-none bg-gray-800/50 text-gray-300 py-2 pl-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F4A024] cursor-pointer text-sm border border-gray-600"
                      >
--                      {sortOptions.map(option => (
+                      {sortOptions.map(option => (
 +                      {sortOptions.map((option) => (
                          <option key={option.value} value={option.value} className="bg-gray-800">
                            {option.label}
@@ -398,7 +419,7 @@
                    <p className="text-gray-300">Please try again later.</p>
                  </div>
                ) : results.length === 0 ? (
--                <div className="text-center py-12">
+                <div className="text-center py-12">
 +                <div className="text-center py-12 bg-gray-800/30 rounded-lg">
                    <p className="text-gray-300 font-bold">No {searchMode} found for "{initialQuery}"</p>
                    {totalActiveFilters > 0 && (
