@@ -427,16 +427,6 @@ export default function Navbar() {
                         >
                           View Profile
                         </Link>
-                        <Link
-                          to="/saved-suppliers"
-                          className="block px-4 py-2 text-sm text-gray-300 hover:text-[#F4A024] hover:bg-gray-700"
-                          onClick={() => {
-                            setActiveDropdown(null);
-                            trackNavigation('profile', 'saved-suppliers');
-                          }}
-                        >
-                          Saved Suppliers
-                        </Link>
                         <button
                           onClick={() => {
                             handleSignOut();
