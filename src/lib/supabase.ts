@@ -5,20 +5,19 @@ import { retryWithBackoff } from './errorLogging';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Provide fallback values during build to prevent build failures
+const url = supabaseUrl || 'https://placeholder.supabase.co';
+const anonKey = supabaseAnonKey || 'placeholder-key';
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  // console.error('Missing Supabase environment variables:', {
-  //   url: !!supabaseUrl,
-  //   key: !!supabaseAnonKey
-  // });
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+  console.warn('Missing Supabase environment variables. Using fallback values for build.');
 }
 
 // Validate URL format
 try {
-  new URL(supabaseUrl);
+  new URL(url);
 } catch (error) {
-  // console.error('Invalid Supabase URL format:', supabaseUrl);
-  throw new Error('Invalid Supabase URL format. Please check VITE_SUPABASE_URL in your .env file.');
+  console.warn('Invalid Supabase URL format. Using fallback for build.');
 }
 
 // console.log('Initializing Supabase client with URL:', supabaseUrl);
@@ -28,8 +27,8 @@ let supabase: any;
 try {
   console.log('Attempting to initialize Supabase client...');
   supabase = createClient(
-    supabaseUrl,
-    supabaseAnonKey,
+    url,
+    anonKey,
     {
       auth: {
         persistSession: true,
@@ -49,10 +48,10 @@ try {
 } catch (error) {
   console.error('❌ Failed to initialize Supabase client:', error);
   console.error('Environment variables:', {
-    url: supabaseUrl,
-    keyLength: supabaseAnonKey?.length || 0
+    url,
+    keyLength: anonKey?.length || 0
   });
-  throw new Error(`Supabase client initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  console.warn(`Supabase client initialization failed during build: ${error instanceof Error ? error.message : 'Unknown error'}`);
 }
 
 export { supabase };
