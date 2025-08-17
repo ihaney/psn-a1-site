@@ -1,12 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react'; // Add useState
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet's CSS
-
-// You will need to import your GeoJSON data here
-// For now, we'll use a placeholder.
-// If you placed it in `public/ne_50m_admin_0_countries.json`, you might fetch it.
-// For demonstration, let's assume it's imported or fetched.
-// import worldGeoJSON from '../../public/ne_50m_admin_0_countries.json'; // Example if importing directly
 
 interface WorldMapProps {
   // You'll pass data to this component later, e.g., country-specific metrics
@@ -14,15 +8,27 @@ interface WorldMapProps {
 }
 
 export default function WorldMap({ countryData }: WorldMapProps) {
-  // Default position for the map (e.g., center of the world)
+  const [geoJsonData, setGeoJsonData] = useState<GeoJSON.GeoJson | null>(null); // State to hold GeoJSON data
   const position: [number, number] = [0, 0]; // Latitude, Longitude
   const zoom = 2; // Initial zoom level
 
-  // Placeholder for GeoJSON data. You'll replace this with your actual loaded data.
-  const geoJsonData: GeoJSON.GeoJson = {
-    type: 'FeatureCollection',
-    features: [] // This will be populated with your country data
-  };
+  // Fetch GeoJSON data when component mounts
+  useEffect(() => {
+    async function fetchGeoJSON() {
+      try {
+        const response = await fetch('/ne_50m_admin_0_countries.json'); // Path to your GeoJSON file
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setGeoJsonData(data);
+      } catch (error) {
+        console.error("Error fetching GeoJSON data:", error);
+        // Handle error, e.g., set an error state or show a message
+      }
+    }
+    fetchGeoJSON();
+  }, []); // Empty dependency array means this runs once on mount
 
   // Function to style each country feature
   const style = (feature: any) => {
@@ -62,8 +68,8 @@ export default function WorldMap({ countryData }: WorldMapProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {/* GeoJSON layer will go here. We'll load the data dynamically. */}
-        {geoJsonData.features.length > 0 && (
+        {/* Render GeoJSON layer only when data is loaded */}
+        {geoJsonData && geoJsonData.features.length > 0 && (
           <GeoJSON 
             data={geoJsonData} 
             style={style} 
