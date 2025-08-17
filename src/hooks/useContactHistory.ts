@@ -39,7 +39,7 @@ export function useContactHistory() {
             Product_Image_URL,
             Product_URL,
             Product_MOQ,
-            Countries (Country_Title),
+            Product_Country_Name,
             Categories (Category_Name),
             Supplier (Supplier_Title),
             Sources (Source_Title)
@@ -59,7 +59,7 @@ export function useContactHistory() {
           name: item.Products.Product_Title,
           Product_Price: item.Products.Product_Price,
           image: item.Products.Product_Image_URL || '',
-          country: item.Products.Countries?.Country_Title || 'Unknown',
+          country: item.Products.Product_Country_Name || 'Unknown',
           category: item.Products.Categories?.Category_Name || 'Unknown',
           supplier: item.Products.Supplier?.Supplier_Title || 'Unknown',
           Product_MOQ: item.Products.Product_MOQ,

@@ -351,10 +351,6 @@ export default function SearchResultsPage() {
     return Object.values(activeFilters).reduce((total, filters) => total + filters.length, 0);
   }, [activeFilters]);
 
-  const totalActiveFilters = useMemo(() => {
-    return Object.values(activeFilters).reduce((total, filters) => total + filters.length, 0);
-  }, [activeFilters]);
-
   return (
     <>
       <SEO
