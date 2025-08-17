@@ -1,11 +1,10 @@
-// src/pages/CountriesListPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Breadcrumbs from '../components/Breadcrumbs';
-import WorldMap from '../components/WorldMap'; // <--- Add this import
+import WorldMap from '../components/WorldMap';
 
 interface CountryListItem {
   Country_ID: string;
@@ -13,6 +12,8 @@ interface CountryListItem {
   Country_Image: string | null;
   product_count: number;
   supplier_count: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export default function CountriesListPage() {
@@ -25,7 +26,7 @@ export default function CountriesListPage() {
       try {
         const { data: countriesData, error: countriesError } = await supabase
           .from('Countries')
-          .select('Country_ID, Country_Title, Country_Image');
+          .select('Country_ID, Country_Title, Country_Image, latitude, longitude');
 
         if (countriesError) throw countriesError;
 
@@ -45,7 +46,9 @@ export default function CountriesListPage() {
             return {
               ...country,
               product_count: productCount || 0,
-              supplier_count: supplierCount || 0
+              supplier_count: supplierCount || 0,
+              latitude: country.latitude,
+              longitude: country.longitude
             };
           })
         );
@@ -87,9 +90,44 @@ export default function CountriesListPage() {
         <div className="max-w-7xl mx-auto">
           <Breadcrumbs currentPageTitle="Countries" />
 
-          {/* Add the WorldMap component here */}
-          <div className="mb-8"> {/* Add some margin below the map */}
-            <WorldMap countryData={countries} /> {/* <--- Pass the countries data */}
+          <div className="mb-8">
+            <WorldMap countryData={countries} />
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-tour="countries-list">
+            {countries.map((country) => (
+              <div
+                key={country.Country_ID}
+                onClick={() => handleCountryClick(country.Country_ID)}
+                className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 cursor-pointer hover:bg-gray-700/50 transition-all"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  {country.Country_Image && (
+                    <img
+                      src={country.Country_Image}
+                      alt={country.Country_Title}
+                      className="w-12 h-12 object-contain rounded-full"
+                    />
+                  )}
+                  <h2 className="text-xl font-semibold text-gray-100">
+                    {country.Country_Title}
+                  </h2>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-400">
+                    {country.product_count} {country.product_count === 1 ? 'product' : 'products'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {country.supplier_count} {country.supplier_count === 1 ? 'supplier' : 'suppliers'}
+                  </p>
+                  {country.latitude && country.longitude && (
+                    <p className="text-xs text-[#F4A024]">
+                      📍 Pinpointed on map
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

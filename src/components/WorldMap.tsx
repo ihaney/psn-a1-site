@@ -1,23 +1,45 @@
-// src/components/WorldMap.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css'; // Import Leaflet's CSS
-import { useNavigate } from 'react-router-dom'; // <--- Import useNavigate
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useNavigate } from 'react-router-dom';
+import L from 'leaflet';
+
+// Fix for default markers in react-leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Create a custom icon with your brand color
+const customIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+      <path fill="#F4A024" stroke="#000" stroke-width="1" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+  `),
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
 
 interface CountryData {
   Country_ID: string;
   Country_Title: string;
   product_count: number;
   supplier_count: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface WorldMapProps {
-  countryData?: CountryData[]; // Expect an array of CountryData
+  countryData?: CountryData[];
 }
 
 export default function WorldMap({ countryData }: WorldMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<GeoJSON.GeoJson | null>(null);
-  const navigate = useNavigate(); // <--- Initialize useNavigate
+  const navigate = useNavigate();
   const position: [number, number] = [0, 0];
   const zoom = 2;
 
@@ -140,6 +162,8 @@ export default function WorldMap({ countryData }: WorldMapProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        
+        {/* Render country shapes */}
         {geoJsonData && geoJsonData.features.length > 0 && (
           <GeoJSON 
             data={geoJsonData} 
@@ -147,6 +171,47 @@ export default function WorldMap({ countryData }: WorldMapProps) {
             onEachFeature={onEachFeature} 
           />
         )}
+
+        {/* Render markers for countries with coordinates */}
+        {countryData?.map(country => (
+          country.latitude && country.longitude ? (
+            <Marker 
+              key={country.Country_ID} 
+              position={[country.latitude, country.longitude]}
+              icon={customIcon}
+              eventHandlers={{
+                click: () => {
+                  console.log('Marker clicked for:', country.Country_Title);
+                  navigate(`/search?country=${country.Country_ID}`);
+                },
+              }}
+            >
+              <Popup>
+                <div className="text-gray-900 min-w-[200px]">
+                  <h3 className="font-bold text-lg mb-2 text-[#F4A024]">
+                    {country.Country_Title}
+                  </h3>
+                  <div className="space-y-1 mb-3">
+                    <p className="flex justify-between">
+                      <span>Products:</span>
+                      <span className="font-semibold">{country.product_count.toLocaleString()}</span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span>Suppliers:</span>
+                      <span className="font-semibold">{country.supplier_count.toLocaleString()}</span>
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/search?country=${country.Country_ID}`)}
+                    className="w-full bg-[#F4A024] text-white px-3 py-2 rounded-md hover:bg-[#F4A024]/90 transition-colors text-sm font-medium"
+                  >
+                    View Products & Suppliers
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ) : null
+        ))}
       </MapContainer>
     </div>
   );
