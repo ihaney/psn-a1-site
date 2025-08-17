@@ -110,7 +110,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
         click: () => {
           console.log('Clicked on:', countryName, 'ID:', data.Country_ID);
           // Navigate to the search page for this country
-          navigate(`/search?country=${data.Country_ID}`);
+          navigate(`/search?q=${encodeURIComponent(data.Country_Title)}&mode=products`);
         },
         // Optional: Add hover effects
         mouseover: (e: any) => {
@@ -188,7 +188,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                   className="min-w-[280px] cursor-pointer bg-gray-900 rounded-lg p-6 hover:bg-gray-800 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/search?country=${country.Country_ID}`);
+                    navigate(`/search?q=${encodeURIComponent(country.Country_Title)}&mode=products`);
                   }}
                 >
                   <div className="flex items-center gap-4 mb-4">

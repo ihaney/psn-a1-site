@@ -75,7 +75,11 @@ export default function CountriesListPage() {
   }, []);
 
   const handleCountryClick = (countryId: string) => {
-    navigate(`/search?country=${countryId}`);
+    // Find the country title for the given ID
+    const country = countries.find(c => c.Country_ID === countryId);
+    if (country) {
+      navigate(`/search?q=${encodeURIComponent(country.Country_Title)}&mode=products`);
+    }
   };
 
   const totalProducts = countries.reduce((sum, country) => sum + country.product_count, 0);
