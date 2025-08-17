@@ -86,7 +86,7 @@
          // Build Meilisearch filters from activeFilters state
          for (const filterKey in activeFilters) {
            if (activeFilters[filterKey].length > 0) {
--            const filterValues = activeFilters[filterKey].map(value => `"${value}"`).join(' OR ');
+            const filterValues = activeFilters[filterKey].map(value => `${filterKey} = "${value}"`).join(' OR ');
 +            const filterValues = activeFilters[filterKey].map(value => \`\`${filterKey}\` = "${value}"`).join(' OR ');
              meilisearchFilters.push(`(${filterValues})`);
            }
