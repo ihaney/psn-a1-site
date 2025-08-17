@@ -52,10 +52,18 @@
     padding: 0 !important;
     border: none !important;
     background: transparent !important;
+    box-shadow: none !important;
   }
 
   .leaflet-popup-tip {
     background: #111827 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Also target the container that holds the popup, just in case */
+  .leaflet-popup-pane .leaflet-popup {
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
   }
