@@ -41,6 +41,7 @@
   /* Leaflet popup styling overrides */
   .leaflet-popup-content-wrapper {
     background: transparent !important;
+   border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     padding: 0 !important;
@@ -49,6 +50,7 @@
   .leaflet-popup-content {
     margin: 0 !important;
     padding: 0 !important;
+   border: none !important;
     background: transparent !important;
   }
 
