@@ -4,13 +4,16 @@ import { ChevronDown } from 'lucide-react';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllSources } from '../services/api';
-import { logSearchQuery } from '../services/analytics';
-import { createSupplierUrl } from '../utils/urlUtils';
+import { logSearchQuery } from '../lib/searchLogger';
+import { createSupplierUrl } from '../utils/urlHelpers';
 import SearchHeader from '../components/SearchHeader';
 import Breadcrumbs from '../components/Breadcrumbs';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductCard from '../components/ProductCard';
 import SupplierCard from '../components/SupplierCard';
+import SEO from '../components/SEO';
+import { supabase } from '../lib/supabase';
+import { productsIndex, suppliersIndex } from '../lib/meilisearch';
 
 interface SearchResult {
   id: string;
