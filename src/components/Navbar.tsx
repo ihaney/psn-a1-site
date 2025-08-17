@@ -193,16 +193,6 @@ export default function Navbar() {
                     >
                       <div className="py-1" role="menu">
                         <Link
-                          to="/products"
-                          className="block px-4 py-2 text-sm text-gray-300 hover:text-[#F4A024] hover:bg-gray-700"
-                          onClick={() => {
-                            closeMobileMenu();
-                            trackNavigation('menu', 'products');
-                          }}
-                        >
-                          All Products
-                        </Link>
-                        <Link
                           to="/suppliers"
                           className="block px-4 py-2 text-sm text-gray-300 hover:text-[#F4A024] hover:bg-gray-700"
                           onClick={() => {
@@ -511,16 +501,6 @@ export default function Navbar() {
                 </button>
                 {activeDropdown === 'discover' && (
                   <div className="pl-4 space-y-2 bg-gray-700">
-                    <Link
-                      to="/products"
-                      className="block px-3 py-2 text-gray-300 hover:text-[#F4A024]"
-                      onClick={() => {
-                        closeMobileMenu();
-                        trackNavigation('mobile_menu', 'products');
-                      }}
-                    >
-                      All Products
-                    </Link>
                     <Link
                       to="/suppliers"
                       className="block px-3 py-2 text-gray-300 hover:text-[#F4A024]"
