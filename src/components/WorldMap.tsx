@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
+import { Separator } from './ui/separator';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -184,7 +185,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
             >
               <Popup>
                 <div 
-                  className="min-w-[280px] cursor-pointer bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 hover:bg-gray-700/50 transition-all"
+                  className="min-w-[280px] cursor-pointer bg-gray-900 rounded-lg p-6 hover:bg-gray-800 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/search?country=${country.Country_ID}`);
@@ -207,6 +208,9 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                       </p>
                     </div>
                   </div>
+                  
+                  <Separator className="bg-gray-700 mb-4" />
+                  
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Products:</span>
