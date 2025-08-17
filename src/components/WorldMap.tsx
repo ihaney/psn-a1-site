@@ -219,7 +219,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Sources:</span>
                       <span className="text-gray-100 font-medium">{country.sources_count}</span>
-                    </p>
+                    </div>
                   </div>
                 </div>
               </Popup>

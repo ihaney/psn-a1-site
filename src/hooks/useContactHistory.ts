@@ -40,9 +40,9 @@ export function useContactHistory() {
             Product_URL,
             Product_MOQ,
             Product_Country_Name,
+            Product_Source_Name,
             Categories (Category_Name),
-            Product_Supplier_Name,
-            Sources (Source_Title)
+            Product_Supplier_Name
           )
         `)
         .eq('member_id', memberData.id)
@@ -64,7 +64,7 @@ export function useContactHistory() {
           supplier: item.Products.Product_Supplier_Name || 'Unknown',
           Product_MOQ: item.Products.Product_MOQ,
           sourceUrl: item.Products.Product_URL || '',
-          marketplace: item.Products.Sources?.Source_Title || 'Unknown'
+          marketplace: item.Products.Product_Source_Name || 'Unknown'
         }
       }));
     }
