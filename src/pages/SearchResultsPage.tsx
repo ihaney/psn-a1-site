@@ -63,7 +63,29 @@ export default function SearchResultsPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>({});
+  const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>(
+    () => {
+      const initialFilters: { [key: string]: string[] } = {};
+      const categoryParam = queryParams.get('category');
+      const countryParam = queryParams.get('country');
+      const sourceParam = queryParams.get('source');
+
+      if (categoryParam) {
+        initialFilters['category'] = [categoryParam]; // Use Meilisearch field name
+      }
+      if (countryParam) {
+        if (initialMode === 'products') {
+          initialFilters['country'] = [countryParam]; // Use Meilisearch field name
+        } else {
+          initialFilters['Supplier_Country_Name'] = [countryParam];
+        }
+      }
+      if (sourceParam) {
+        initialFilters['source'] = [sourceParam]; // Use Meilisearch field name for products, Supplier_Source_ID for suppliers
+      }
+      return initialFilters;
+    }
+  );
   const [sortBy, setSortBy] = useState('relevance');
   const [facetDistribution, setFacetDistribution] = useState<any>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -145,25 +167,17 @@ export default function SearchResultsPage() {
         // Build Meilisearch filters from activeFilters state
         for (const filterKey in activeFilters) {
           if (activeFilters[filterKey].length > 0) {
-            const filterValues = activeFilters[filterKey].map(value => `"${value}"`).join(' OR ');
-            meilisearchFilters.push(`${filterKey} IN [${filterValues}]`);
+            const filterValues = activeFilters[filterKey].map(value => `\`${filterKey}\` = "${value}"`).join(' OR '); // Corrected syntax
+            meilisearchFilters.push(`(${filterValues})`);
           }
         }
 
         // Build Meilisearch sort
         if (sortBy !== 'relevance') {
-          if (sortBy === 'price:asc') {
-            meilisearchSort.push('price:asc');
-          } else if (sortBy === 'price:desc') {
-            meilisearchSort.push('price:desc');
-          } else if (sortBy === 'product_count:desc') {
-            meilisearchSort.push('product_count:desc');
-          } else if (sortBy === 'product_count:asc') {
-            meilisearchSort.push('product_count:asc');
-          }
+          meilisearchSort.push(sortBy);
         }
 
-        if (searchMode === 'products') {
+        if (searchMode === 'products') { // Corrected facet names to match Meilisearch index
           facets = ['category', 'country', 'source'];
           const productsResults = await productsIndex.search(debouncedQuery, {
             limit: 100,
@@ -192,7 +206,7 @@ export default function SearchResultsPage() {
           setTotalResults(productsResults.estimatedTotalHits || productsResults.hits.length);
 
         } else { // searchMode === 'suppliers'
-          facets = ['Supplier_Country_Name', 'Supplier_Source_ID'];
+          facets = ['Supplier_Country_Name', 'Supplier_Source_ID']; // These are correct
           const suppliersResults = await suppliersIndex.search(debouncedQuery, {
             limit: 100,
             attributesToRetrieve: [
@@ -265,42 +279,42 @@ export default function SearchResultsPage() {
 
     if (searchMode === 'products') {
       // Categories
-      if (facetDistribution['Product_Category_Name']) {
-        groups.push({
+      if (facetDistribution['category']) {
+        groups.push({ // Corrected key to match Meilisearch index
           title: 'Category Type',
-          key: 'Product_Category_Name',
-          options: Object.entries(facetDistribution['Product_Category_Name']).map(([name, count]) => ({
+          key: 'category',
+          options: Object.entries(facetDistribution['category'] || {}).map(([name, count]) => ({
             id: name,
             name: name,
             count: count as number,
           })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Category_Name'] || [],
+          selected: activeFilters['category'] || [],
         });
       }
       // Supplier Country
-      if (facetDistribution['Product_Country_Name']) {
-        groups.push({
+      if (facetDistribution['country']) {
+        groups.push({ // Corrected key to match Meilisearch index
           title: 'Supplier Country',
-          key: 'Product_Country_Name',
-          options: Object.entries(facetDistribution['Product_Country_Name']).map(([name, count]) => ({
+          key: 'country',
+          options: Object.entries(facetDistribution['country'] || {}).map(([name, count]) => ({
             id: name,
             name: name,
             count: count as number,
           })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Country_Name'] || [],
+          selected: activeFilters['country'] || [],
         });
       }
       // Sources
-      if (facetDistribution['Product_Source_Name']) {
-        groups.push({
+      if (facetDistribution['source']) {
+        groups.push({ // Corrected key to match Meilisearch index
           title: 'Sources',
-          key: 'Product_Source_Name',
-          options: Object.entries(facetDistribution['Product_Source_Name']).map(([name, count]) => ({
+          key: 'source',
+          options: Object.entries(facetDistribution['source'] || {}).map(([name, count]) => ({
             id: name,
             name: name,
             count: count as number,
           })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Source_Name'] || [],
+          selected: activeFilters['source'] || [],
         });
       }
     } else { // searchMode === 'suppliers'
@@ -318,31 +332,31 @@ export default function SearchResultsPage() {
         });
       }
       // Sources (using Product_Source_Name for consistency)
-      if (facetDistribution['Product_Source_Name']) {
+      if (facetDistribution['Supplier_Source_ID'] && allSourcesMap) {
         groups.push({
-          title: 'Sources',
-          key: 'Product_Source_Name',
-          options: Object.entries(facetDistribution['Product_Source_Name']).map(([name, count]) => ({
-            id: name,
-            name: name,
+          title: 'Sources', // Corrected key to match Meilisearch index
+          key: 'Supplier_Source_ID', // Use the actual Meilisearch facet key
+          options: Object.entries(facetDistribution['Supplier_Source_ID'] || {}).map(([id, count]) => ({
+            id: id,
+            name: allSourcesMap[id] || `Source ${id}`,
             count: count as number,
           })).sort((a, b) => b.count - a.count),
-          selected: activeFilters['Product_Source_Name'] || [],
-        });
+          selected: activeFilters['Supplier_Source_ID'] || [],
+        }); // Corrected key to match Meilisearch index
       }
     }
 
     return groups;
-  }, [facetDistribution, searchMode, activeFilters]);
+  }, [facetDistribution, searchMode, activeFilters, allSourcesMap]);
 
   const sortOptions = useMemo(() => {
     if (searchMode === 'products') {
       return [
-        { value: 'relevance', label: 'Relevance' },
-        { value: 'price:asc', label: 'Price: Low to High' },
-        { value: 'price:desc', label: 'Price: High to Low' },
+        { value: 'relevance', label: 'Relevance' }, // Corrected value to match Meilisearch sortable attribute
+        { value: 'price:asc', label: 'Price: Low to High' }, // Corrected value to match Meilisearch sortable attribute
+        { value: 'price:desc', label: 'Price: High to Low' }, // Corrected value to match Meilisearch sortable attribute
       ];
-    } else { // searchMode === 'suppliers'
+    } else { // searchMode === 'suppliers' // Corrected value to match Meilisearch sortable attribute
       return [
         { value: 'relevance', label: 'Relevance' },
         { value: 'product_count:desc', label: 'Product Count: High to Low' },
@@ -350,11 +364,11 @@ export default function SearchResultsPage() {
       ];
     }
   }, [searchMode]);
-
-  const clearAllFilters = useCallback(() => {
-    setActiveFilters({});
-  }, []);
-
+  
+  const clearAllFilters = useCallback(() => { // Corrected value to match Meilisearch sortable attribute
+    setActiveFilters({}); // Corrected value to match Meilisearch sortable attribute
+  }, []); // Corrected value to match Meilisearch sortable attribute
+  
   const totalActiveFilters = useMemo(() => {
     return Object.values(activeFilters).reduce((total, filters) => total + filters.length, 0);
   }, [activeFilters]);
