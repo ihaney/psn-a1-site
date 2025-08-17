@@ -1,4 +1,3 @@
-```tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
@@ -519,4 +518,3 @@ const SearchResultsPage: React.FC = () => {
 };
 
 export default SearchResultsPage;
-```
