@@ -166,9 +166,9 @@ export default function WorldMap({ countryData }: WorldMapProps) {
         />
         
         {/* Render country shapes */}
-        {geoJsonData && geoJsonData.features.length > 0 && (
+        {geoJsonData && (geoJsonData as any).features?.length > 0 && (
           <GeoJSON 
-            data={geoJsonData} 
+            data={geoJsonData as any} 
             style={style} 
             onEachFeature={onEachFeature} 
           />
@@ -182,9 +182,9 @@ export default function WorldMap({ countryData }: WorldMapProps) {
               position={[country.latitude, country.longitude]}
               icon={customIcon}
             >
-              <Popup>
+              <Popup className="paisan-popup" closeButton={false}>
                 <div 
-                  className="min-w-[280px] cursor-pointer bg-gray-900 rounded-lg p-6 hover:bg-gray-800 transition-all"
+                  className="min-w-[280px] cursor-pointer bg-gray-900 p-6 hover:bg-gray-800 transition-all overflow-hidden"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/search?q=${encodeURIComponent(country.Country_Title)}&mode=products`);
