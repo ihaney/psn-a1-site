@@ -53,8 +53,12 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'public/**',
+          src: 'public/*',
           dest: ''
+        },
+        {
+          src: 'public/GEOJSON/*',
+          dest: 'GEOJSON'
         }
       ]
     })
