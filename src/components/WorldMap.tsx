@@ -198,13 +198,10 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                         className="w-12 h-12 object-contain rounded-full"
                       />
                     )}
-                    <div>
+                    <div className="flex-1 text-center">
                       <h2 className="text-xl font-semibold text-gray-100">
                         {country.Country_Title}
                       </h2>
-                      <p className="text-[#F4A024] font-medium">
-                        {country.product_count} products
-                      </p>
                     </div>
                   </div>
                   
