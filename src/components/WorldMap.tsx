@@ -96,7 +96,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
       opacity: 0,
       color: 'white',
       dashArray: '3',
-      fillOpacity: 0.7
+      fillOpacity: 0.0
     };
   };
 
