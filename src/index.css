@@ -40,7 +40,7 @@
 
   /* Leaflet popup styling overrides */
   .leaflet-popup-content-wrapper {
-    background: #111827 !important;
+    background: none !important;
     border: none !important;
     border-radius: 0.5rem !important;
     box-shadow: none !important;
@@ -63,7 +63,7 @@
 
   /* Also target the container that holds the popup, just in case */
   .leaflet-popup-pane .leaflet-popup {
-    background: transparent !important;
+    background: none !important;
     border: none !important;
     box-shadow: none !important;
   }
