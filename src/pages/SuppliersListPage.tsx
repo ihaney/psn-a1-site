@@ -130,7 +130,7 @@ export default function SuppliersListPage() {
       // Start building the query
       let supabaseQuery = supabase
         .from('Supplier')
-        .select('*, product_count:Products(count)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .range(from, to);
 
       // Apply filters

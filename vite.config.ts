@@ -53,7 +53,7 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'public/*',
+          src: 'public/**',
           dest: ''
         }
       ]
