@@ -190,7 +190,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
                     navigate(`/search?q=${encodeURIComponent(country.Country_Title)}&mode=products`);
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1 mb-2">
                     {country.Country_Image && (
                       <img
                         src={country.Country_Image}
