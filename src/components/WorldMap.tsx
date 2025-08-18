@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { Separator } from './ui/separator';
