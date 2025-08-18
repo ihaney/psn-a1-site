@@ -92,7 +92,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
 
     return {
       fillColor: fillColor,
-      weight: 1,
+      weight: 0,
       opacity: 1,
       color: 'white',
       dashArray: '3',
