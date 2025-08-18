@@ -121,7 +121,6 @@ export default function SearchResultsPage() {
     if (searchQuery) params.set('q', searchQuery);
     if (searchMode) params.set('mode', searchMode);
     if (currentPage > 1) params.set('page', currentPage.toString());
-    if (currentPage > 1) params.set('page', currentPage.toString());
     navigate(`?${params.toString()}`, { replace: true });
   }, [searchQuery, searchMode, currentPage, navigate]);
 
@@ -141,19 +140,12 @@ export default function SearchResultsPage() {
     }
   }, [queryParams]);
 
-  // Reset to page 1 when search query, mode, or filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedQuery, searchMode, activeFilters, sortBy]);
-
   // Perform search when debounced query, mode, filters, sort order, or page changes
   useEffect(() => {
     async function performSearch() {
       if (!debouncedQuery.trim()) {
         setResults([]);
         setFacetDistribution({});
-        setTotalPages(0);
-        setTotalHits(0);
         setTotalPages(0);
         setTotalHits(0);
         return;
@@ -194,7 +186,6 @@ export default function SearchResultsPage() {
           const productsResults = await productsIndex.search(debouncedQuery, {
             limit: hitsPerPage,
             offset: (currentPage - 1) * hitsPerPage,
-            offset: (currentPage - 1) * hitsPerPage,
             attributesToRetrieve: [
               'id', 'title', 'price', 'image', 'url', 'moq', 'country', 'category', 'supplier', 'source'
             ],
@@ -219,14 +210,11 @@ export default function SearchResultsPage() {
           setFacetDistribution(productsResults.facetDistribution);
           setTotalHits(productsResults.estimatedTotalHits || 0);
           setTotalPages(Math.ceil((productsResults.estimatedTotalHits || 0) / hitsPerPage));
-          setTotalHits(productsResults.estimatedTotalHits || 0);
-          setTotalPages(Math.ceil((productsResults.estimatedTotalHits || 0) / hitsPerPage));
 
         } else { // searchMode === 'suppliers'
           facets = ['Supplier_Country_Name', 'Supplier_Source_ID'];
           const suppliersResults = await suppliersIndex.search(debouncedQuery, {
             limit: hitsPerPage,
-            offset: (currentPage - 1) * hitsPerPage,
             offset: (currentPage - 1) * hitsPerPage,
             attributesToRetrieve: [
               'Supplier_ID', 'Supplier_Title', 'Supplier_Description', 'Supplier_Country_Name',
@@ -253,8 +241,6 @@ export default function SearchResultsPage() {
           setFacetDistribution(suppliersResults.facetDistribution);
           setTotalHits(suppliersResults.estimatedTotalHits || 0);
           setTotalPages(Math.ceil((suppliersResults.estimatedTotalHits || 0) / hitsPerPage));
-          setTotalHits(suppliersResults.estimatedTotalHits || 0);
-          setTotalPages(Math.ceil((suppliersResults.estimatedTotalHits || 0) / hitsPerPage));
         }
 
         setResults(searchResults);
@@ -265,8 +251,6 @@ export default function SearchResultsPage() {
         setError('Failed to perform search. Please try again.');
         setResults([]);
         setFacetDistribution({});
-        setTotalPages(0);
-        setTotalHits(0);
         setTotalPages(0);
         setTotalHits(0);
       } finally {
@@ -392,7 +376,7 @@ export default function SearchResultsPage() {
     }
 
     return groups;
-  }, [facetDistribution, searchMode, activeFilters]);
+  }, [facetDistribution, searchMode, activeFilters, allSourcesMap]);
 
   const sortOptions = useMemo(() => {
     if (searchMode === 'products') {
@@ -409,30 +393,9 @@ export default function SearchResultsPage() {
       ];
     }
   }, [searchMode]);
-  // Pagination handlers
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handlePageClick = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
 
   const clearAllFilters = useCallback(() => {
     setActiveFilters({});
-    setCurrentPage(1);
     setCurrentPage(1);
   }, []);
 
@@ -485,85 +448,24 @@ export default function SearchResultsPage() {
                           <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === group.key ? 'rotate-180' : ''}`} />
                         </button>
                         {activeDropdown === group.key && (
-                <>
-                  <div className={`grid gap-6 ${searchMode === 'products' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
-                    {results.map(result => (
-                      result.type === 'product' ? (
-                        <ProductCard key={result.id} product={result} />
-                      ) : (
-                        <SupplierCard
-                          key={result.id}
-                          supplier={{
-                            Supplier_ID: result.id,
-                            Supplier_Title: result.name,
-                            Supplier_Description: result.description,
-                            Supplier_Country_Name: result.country,
-                            Supplier_City_Name: result.location,
-                            Supplier_Location: result.location,
-                            Supplier_Source_ID: result.sourceId,
-                            product_keywords: result.productKeywords,
-                            Supplier_Website: '',
-                            Supplier_Email: '',
-                            Supplier_Whatsapp: '',
-                          }}
-                        />
-                      )
-                    ))}
-                  </div>
-
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-4 mt-8">
-                      <button
-                        onClick={handlePrevPage}
-                        disabled={currentPage <= 1}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </button>
-                      
-                      {/* Page numbers */}
-                      <div className="flex items-center gap-2">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => handlePageClick(pageNum)}
-                              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                                currentPage === pageNum
-                                  ? 'bg-[#F4A024] text-gray-900'
-                                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
+                          <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                            {group.options.map(option => (
+                              <label key={option.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/30 p-2 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={group.selected.includes(option.id)}
+                                  onChange={() => handleFilterChange(group.key, option.id)}
+                                  className="w-4 h-4 text-[#F4A024] bg-gray-700 border-gray-600 rounded focus:ring-[#F4A024] focus:ring-2"
+                                />
+                                <span className="text-gray-300 text-sm flex-1">{option.name}</span>
+                                <span className="text-gray-500 text-xs">({option.count})</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      
-                      <button
-                        onClick={handleNextPage}
-                        disabled={currentPage >= totalPages}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 rounded-lg text-gray-300 hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -601,9 +503,6 @@ export default function SearchResultsPage() {
                   <h1 className="text-2xl font-bold text-gray-100">
                     {searchMode === 'products' ? 'Products' : 'Suppliers'} for "{searchQuery}"
                   </h1>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Showing {((currentPage - 1) * hitsPerPage) + 1}-{Math.min(currentPage * hitsPerPage, totalHits)} of {totalHits.toLocaleString()} results
-                  </p>
                   <p className="text-gray-400 text-sm mt-1">
                     Showing {((currentPage - 1) * hitsPerPage) + 1}-{Math.min(currentPage * hitsPerPage, totalHits)} of {totalHits.toLocaleString()} results
                   </p>
