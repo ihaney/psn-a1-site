@@ -1,4 +1,7 @@
 // src/entry-client.tsx
+import 'leaflet/dist/leaflet.css';  // Load Leaflet first
+import './index.css';               // Then your overrides
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -8,7 +11,6 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { queryClient } from './lib/queryClient';
-import './index.css';
 
 // Mount only in the browser
 export function mount() {
