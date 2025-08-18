@@ -38,17 +38,50 @@
     box-shadow: 0 0 15px #F4A024;
   }
 
-  /* ===== Minimal Leaflet popup overrides (kill white edge) ===== */
-  .leaflet-popup-content-wrapper,
-  .leaflet-popup-tip {
-    background: #111827 !important; /* dark background */
-    border: none !important;
+  /* === Bullet-proof: kill any white rim on Leaflet popup (scoped) === */
+  .leaflet-popup.paisan-popup,
+  .leaflet-popup-pane .leaflet-popup.paisan-popup {
+    background: transparent !important;
+    border: 0 !important;
     box-shadow: none !important;
+    outline: none !important;
   }
 
-  .leaflet-popup-content {
-    margin: 0 !important; /* removes the halo created by default margin */
+  .leaflet-popup.paisan-popup .leaflet-popup-content-wrapper {
+    background: #111827 !important;   /* dark shell */
+    border: 0 !important;
+    border-radius: 0.5rem !important;  /* wrapper owns rounding */
+    box-shadow: none !important;
+    padding: 0 !important;             /* prevent inner halo */
+    outline: none !important;
+  }
+
+  .leaflet-popup.paisan-popup .leaflet-popup-content {
+    margin: 0 !important;              /* removes default margin halo */
     padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .leaflet-popup.paisan-popup .leaflet-popup-tip-container,
+  .leaflet-popup.paisan-popup .leaflet-popup-tip {
+    background: #111827 !important;    /* match wrapper */
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  /* Optional: if you enable the close button later */
+  .leaflet-popup.paisan-popup .leaflet-popup-close-button {
+    background: transparent !important;
+    color: #9CA3AF !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .leaflet-popup.paisan-popup .leaflet-popup-close-button:hover {
+    color: #F4A024 !important;
   }
 }
 
