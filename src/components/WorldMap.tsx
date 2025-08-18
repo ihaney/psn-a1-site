@@ -182,7 +182,7 @@ export default function WorldMap({ countryData }: WorldMapProps) {
               position={[country.latitude, country.longitude]}
               icon={customIcon}
             >
-              <Popup className="paisan-popup" closeButton={false}>
+              <Popup className="paisan-popup" closeButton={true}>
                 <div 
                   className="min-w-[280px] cursor-pointer bg-gray-900 p-6 hover:bg-gray-800 transition-all overflow-hidden"
                   onClick={(e) => {

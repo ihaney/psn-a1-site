@@ -39,9 +39,7 @@
   }
 
   /* === Bullet-proof: kill any white rim on Leaflet popup (scoped) === */
-  .leaflet-popup.paisan-popup,
-  .leaflet-popup-pane .leaflet-popup.paisan-popup {
-    background: transparent !important;
+  .leaflet-popup.paisan-popup {
     border: 0 !important;
     box-shadow: none !important;
     outline: none !important;
@@ -71,9 +69,9 @@
     border: 0 !important;
     box-shadow: none !important;
     outline: none !important;
+    display: none !important;
   }
 
-  /* Optional: if you enable the close button later */
   .leaflet-popup.paisan-popup .leaflet-popup-close-button {
     background: transparent !important;
     color: #9CA3AF !important;
