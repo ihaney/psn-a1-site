@@ -433,9 +433,9 @@ export default function SupplierPage() {
                 </>
               )}
 
-              {/* Website Preview - Mobile/Tablet */}
+              {/* Website Preview - Mobile/Tablet (visible < md) */}
               {supplier.Landing_Page_URL?.trim() && (
-                <>
+                <div className="block md:hidden">
                   <Separator className="bg-gray-700" />
                   <div>
                     <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
@@ -472,12 +472,12 @@ export default function SupplierPage() {
                       </div>
                     )}
                   </div>
-                </>
+                </div>
               )}
 
-              {/* Website Preview */}
+              {/* Website Preview - Desktop (visible ≥ md) */}
               {supplier.Landing_Page_URL?.trim() && (
-                <>
+                <div className="hidden md:block">
                   <Separator className="bg-gray-700" />
                   <div>
                     <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
@@ -514,7 +514,7 @@ export default function SupplierPage() {
                       </div>
                     )}
                   </div>
-                </>
+                </div>
               )}
 
               {/* Industries Supported */}
