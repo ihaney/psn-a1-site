@@ -299,7 +299,7 @@ export default function SupplierPage() {
         <div className="max-w-7xl mx-auto">
           <Breadcrumbs currentPageTitle={supplier.Supplier_Name} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-3 gap-8">
             {/* Main Content - Left Column */}
             <div className="lg:col-span-2 space-y-8 relative">
               {/* Header */}
@@ -607,7 +607,7 @@ export default function SupplierPage() {
             {/* Right Column - Website Preview (Desktop only) */}
             <div className="lg:col-span-1">
               {supplier.Landing_Page_URL?.trim() && (
-                <div className="hidden lg:block lg:sticky lg:top-24">
+                <div className="lg:sticky lg:top-24">
                   <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6">
                     <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
                     
