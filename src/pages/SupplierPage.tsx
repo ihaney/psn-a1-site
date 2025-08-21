@@ -436,8 +436,8 @@ export default function SupplierPage() {
               {/* Website Preview - Mobile/Tablet */}
               {supplier.Landing_Page_URL?.trim() && (
                 <>
-                  <Separator className="bg-gray-700 lg:hidden" />
-                  <div className="lg:hidden">
+                  <Separator className="bg-gray-700" />
+                  <div>
                     <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
                     
                     <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
@@ -603,48 +603,6 @@ export default function SupplierPage() {
                 <Separator className="bg-gray-700" />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-100 mb-4">
-                    Supplier Products
-                    {supplierProducts.length > 0 && (
-                      <span className="text-sm font-normal text-gray-400 ml-2">
-                        ({productCount} {productCount === 1 ? 'product' : 'products'})
-                      </span>
-                    )}
-                  </h2>
-                  
-                  {productsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <LoadingSpinner />
-                    </div>
-                  ) : supplierProducts.length > 0 ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {limitedProducts.map((product) => (
-                          <ProductCard key={product.id} product={product} />
-                        ))}
-                      </div>
-                      {hasMoreSupplierProducts && (
-                        <div className="mt-6 text-center">
-                          <button
-                            onClick={handleShowAllSupplierProducts}
-                            className="text-[#F4A024] hover:text-[#F4A024]/80 text-sm font-medium flex items-center gap-1 mx-auto"
-                          >
-                            View All Products from {supplier.Supplier_Name}
-                            <ArrowRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8 bg-gray-700/30 rounded-lg">
-                      <p className="text-gray-400">No products found for this supplier.</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Products may not be available in our current catalog.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            </div>
           </div>
         </div>
       </div>
