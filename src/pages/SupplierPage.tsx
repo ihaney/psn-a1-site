@@ -475,6 +475,47 @@ export default function SupplierPage() {
                 </>
               )}
 
+              {/* Website Preview */}
+              {supplier.Landing_Page_URL?.trim() && (
+                <>
+                  <Separator className="bg-gray-700" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4">Website Preview</h2>
+                    
+                    <div className="bg-gray-700/50 rounded-lg overflow-hidden aspect-video mb-4">
+                      {!imageLoadError ? (
+                        <img
+                          src={supplier.Landing_Page_URL.trim()}
+                          alt={`Website screenshot for ${supplier.Supplier_Name}`}
+                          className="w-full h-full object-cover"
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6">
+                          <Globe className="w-12 h-12 text-gray-400 mb-4" />
+                          <p className="text-gray-300 text-sm">Screenshot unavailable</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {supplier.Supplier_Website?.trim() && (
+                      <div className="text-center">
+                        <Button asChild>
+                          <a
+                            href={supplier.Supplier_Website.trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Visit Website
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               {/* Industries Supported */}
               {supplier.ai_industries_supported?.trim() && (
@@ -579,7 +620,7 @@ export default function SupplierPage() {
                       
                       {hasMoreSupplierProducts && (
                         <div className="text-center">
-                          <Button
+                          <Button 
                             onClick={handleShowAllSupplierProducts}
                             className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
                           >
