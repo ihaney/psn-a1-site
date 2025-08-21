@@ -603,6 +603,41 @@ export default function SupplierPage() {
                 <Separator className="bg-gray-700" />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-100 mb-4">
+                    Products from {supplier.Supplier_Name}
+                  </h2>
+                  
+                  {productsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : limitedProducts.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        {limitedProducts.map((product) => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                      
+                      {hasMoreSupplierProducts && (
+                        <div className="text-center">
+                          <Button
+                            onClick={handleShowAllSupplierProducts}
+                            className="bg-[#F4A024] text-gray-900 hover:bg-[#F4A024]/90"
+                          >
+                            View All Products from {supplier.Supplier_Name}
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">No products available from this supplier at the moment.</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            </div>
           </div>
         </div>
       </div>
