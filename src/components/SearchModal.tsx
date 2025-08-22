@@ -292,17 +292,6 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         {/* Search Mode Toggle */}
         <div className="flex gap-2 mb-4">
           <button
-            onClick={() => setSearchMode('products')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              searchMode === 'products'
-                ? 'bg-[#F4A024] text-gray-900'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            Products
-          </button>
-          <button
             onClick={() => setSearchMode('suppliers')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               searchMode === 'suppliers'
@@ -312,6 +301,17 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           >
             <Building2 className="w-4 h-4" />
             Suppliers
+          </button>
+          <button
+            onClick={() => setSearchMode('products')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              searchMode === 'products'
+                ? 'bg-[#F4A024] text-gray-900'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            Products
           </button>
         </div>
 
