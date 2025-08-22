@@ -36,9 +36,9 @@ function getSavedSearchMode(): 'products' | 'suppliers' {
   
   try {
     const saved = localStorage.getItem('paisan_search_mode');
-    return saved === 'suppliers' ? 'suppliers' : 'products';
+    return saved === 'products' ? 'products' : 'suppliers';
   } catch {
-    return 'products';
+    return 'suppliers';
   }
 }
 
